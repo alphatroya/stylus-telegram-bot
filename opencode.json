@@ -1,0 +1,13 @@
+{
+  "formatter": {
+    "swiftformat": {
+      "command": [
+        "swiftformat"
+      ],
+      "extensions": [
+        ".swift"
+      ]
+    }
+  },
+  "$schema": "https://opencode.ai/config.json"
+}
