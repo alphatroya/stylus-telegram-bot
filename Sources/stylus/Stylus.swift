@@ -23,7 +23,8 @@ struct stylus {
 
                 do {
                     let timeString = formatDate("HH:mm", date: message.date)
-                    let lineToAppend = "- TODO **\(timeString)** \(text)\n"
+                    let taggedText = addStylusInboxTag(to: text)
+                    let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
 
                     try appendToJournalFile(at: filePath, content: lineToAppend)
 
