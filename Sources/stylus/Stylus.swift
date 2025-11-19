@@ -9,6 +9,8 @@ struct stylus {
         let config = try await readConfig(provider: yamlProvider())
 
         let bot = TelegramBot(token: config.telegramBotApiKey)
+        let journalsPath = (config.knowledgeBaseLocation as NSString).appendingPathComponent("journals")
+        try ensureDirectoryExists(at: journalsPath)
 
         while let update = bot.nextUpdateSync() {
             if let message = update.message,
@@ -16,15 +18,11 @@ struct stylus {
                from.id == config.telegramUserID,
                let text = message.text
             {
-                let today = formatDate("yyyy_MM_dd", date: message.date)
-                let fileName = "\(today).md"
-                let journalsPath = (config.knowledgeBaseLocation as NSString).appendingPathComponent("journals")
-                let filePath = (journalsPath as NSString).appendingPathComponent(fileName)
+                let messageDateFormatted = formatDate("yyyy_MM_dd", date: message.date)
+                let filePath = (journalsPath as NSString).appendingPathComponent("\(messageDateFormatted).md")
 
                 do {
-                    try ensureDirectoryExists(at: journalsPath)
-
-                    let timeString = formatDate("HH:mm")
+                    let timeString = formatDate("HH:mm", date: message.date)
                     let lineToAppend = "- TODO **\(timeString)** \(text)\n"
 
                     try appendToJournalFile(at: filePath, content: lineToAppend)
