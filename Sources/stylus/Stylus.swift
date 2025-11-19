@@ -13,29 +13,34 @@ struct stylus {
         try ensureDirectoryExists(at: journalsPath)
 
         while let update = bot.nextUpdateSync() {
-            if let message = update.message,
-               let from = message.from,
-               from.id == config.telegramUserID,
-               let text = message.text
-            {
-                let messageDateFormatted = formatDate("yyyy_MM_dd", date: message.date)
-                let filePath = (journalsPath as NSString).appendingPathComponent("\(messageDateFormatted).md")
+            guard let message = update.message,
+                  let from = message.from,
+                  let text = message.text
+            else {
+                continue
+            }
+            guard from.id == config.telegramUserID else {
+                print("Wrong user sent a message, \(from.id) - \(from.username ?? "NONE")")
+                continue
+            }
 
-                do {
-                    let timeString = formatDate("HH:mm", date: message.date)
-                    let taggedText = addStylusInboxTag(to: text)
-                    let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
+            let messageDateFormatted = formatDate("yyyy_MM_dd", date: message.date)
+            let filePath = (journalsPath as NSString).appendingPathComponent("\(messageDateFormatted).md")
 
-                    try appendToJournalFile(at: filePath, content: lineToAppend)
+            do {
+                let timeString = formatDate("HH:mm", date: message.date)
+                let taggedText = addStylusInboxTag(to: text)
+                let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
 
-                    print("Successfully added to journal: \(filePath)")
-                    bot.sendMessageAsync(
-                        chatId: .chat(from.id),
-                        text: "Successfully added to journal!\n\(text)",
-                    )
-                } catch {
-                    print("Error: \(error)")
-                }
+                try appendToJournalFile(at: filePath, content: lineToAppend)
+
+                print("Successfully added to journal: \(filePath)")
+                bot.sendMessageAsync(
+                    chatId: .chat(from.id),
+                    text: "Successfully added to journal!\n\(text)",
+                )
+            } catch {
+                print("Error: \(error)")
             }
         }
 
