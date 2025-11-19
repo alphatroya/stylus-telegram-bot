@@ -14,7 +14,7 @@ struct ConfigReaderTests {
     @Test func successWithAllRequiredKeys() throws {
         let provider = inMemoryStorage(values: [
             "telegramBotApiKey": "test-api-key",
-            "telegramUserId": "123456789",
+            "telegramUserId": 123_456_789,
             "knowledgeBaseLocation": "/path/to/knowledge",
         ])
 
