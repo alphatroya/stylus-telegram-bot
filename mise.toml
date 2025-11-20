@@ -1,3 +1,4 @@
 [tools]
 "go:github.com/idursun/jjui/cmd/jjui" = "latest"
 swiftformat = "latest"
+swiftlint = "latest"
