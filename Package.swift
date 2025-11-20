@@ -6,6 +6,9 @@ import PackageDescription
 let package = Package(
     name: "stylus",
     platforms: [.macOS(.v15)],
+    products: [
+        .executable(name: "stylus", targets: ["stylus"]),
+    ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-configuration.git", from: "0.2.0", traits: ["YAMLSupport"]),
         .package(url: "https://github.com/jpsim/Yams", from: "6.2.0"),
