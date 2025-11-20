@@ -55,7 +55,3 @@ identifier_name:
     - x
     - y
 
-# Analyzer rules (requires full compilation)
-analyzer_rules:
-  - unused_declaration
-  - unused_import
