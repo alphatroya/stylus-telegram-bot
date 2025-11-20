@@ -1,10 +1,10 @@
 import Foundation
 import TelegramBotSDK
 
-// MARK: - stylus
+// MARK: - Stylus
 
 @main
-struct stylus {
+struct Stylus {
     static func main() async throws {
         let config = try await readConfig(provider: yamlProvider())
 
@@ -63,7 +63,11 @@ func appendToJournalFile(at filePath: String, content: String, fileManager: File
 
         let fileHandle = try fileManager.fileHandleForWritingToPath(filePath)
         _ = fileHandle.seekToEndOfFile()
-        fileHandle.write(contentToAppend.data(using: .utf8)!)
+        guard let data = contentToAppend.data(using: .utf8) else {
+            throw NSError(domain: "StringEncodingError", code: 1, userInfo: nil)
+        }
+
+        fileHandle.write(data)
         fileHandle.closeFile()
     } else {
         try fileManager.writeStringToFile(content, filePath, true, .utf8)
