@@ -42,7 +42,8 @@ struct FileWorker: Sendable {
         try String(contentsOfFile: path, encoding: .utf8)
     }
 
-    var writeStringToFile: @Sendable (String, String, Bool, String.Encoding) throws -> Void = { content, path, atomically, encoding in
+    var writeStringToFile: @Sendable (String, String, Bool, String.Encoding) throws -> Void = {
+        content, path, atomically, encoding in
         try content.write(toFile: path, atomically: atomically, encoding: encoding)
     }
 
