@@ -66,6 +66,7 @@ func appendToJournalFile(at filePath: String, content: String, fileManager: File
         guard let data = contentToAppend.data(using: .utf8) else {
             throw NSError(domain: "StringEncodingError", code: 1, userInfo: nil)
         }
+
         fileHandle.write(data)
         fileHandle.closeFile()
     } else {
