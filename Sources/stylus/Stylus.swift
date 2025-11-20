@@ -37,7 +37,7 @@ struct stylus {
                 print("Successfully added to journal: \(filePath)")
                 bot.sendMessageAsync(
                     chatId: .chat(from.id),
-                    text: "Added to journal!",
+                    text: "✅ Entry saved to your journal",
                     replyToMessageId: message.messageId,
                 )
             } catch {
