@@ -37,7 +37,8 @@ struct stylus {
                 print("Successfully added to journal: \(filePath)")
                 bot.sendMessageAsync(
                     chatId: .chat(from.id),
-                    text: "Successfully added to journal!\n\(text)",
+                    text: "Added to journal!",
+                    replyToMessageId: message.messageId,
                 )
             } catch {
                 print("Error: \(error)")
@@ -46,12 +47,6 @@ struct stylus {
 
         fatalError("Server stopped due to error: \(bot.lastError, default: "NONE")")
     }
-}
-
-func formatDate(_ format: String, date: Date = Date()) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = format
-    return formatter.string(from: date)
 }
 
 func ensureDirectoryExists(at path: String, fileManager: FileWorker = .system) throws {
