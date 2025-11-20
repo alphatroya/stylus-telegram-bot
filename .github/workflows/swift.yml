@@ -7,19 +7,36 @@ on:
     branches: [ "*" ]
 
 jobs:
-  test:
-    runs-on: macos-latest
-    
+  quality-gate:
+    runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v4
-    
+
+    - name: Set up mise
+      uses: jdx/mise-action@v2
+      with:
+          install: true
+          cache: true
+          experimental: true
+
+    - name: Check formatting with swiftformat
+      run: swiftformat --lint --strict .
+
+  test:
+    runs-on: macos-latest
+    needs: quality-gate
+
+    steps:
+    - uses: actions/checkout@v4
+
     - name: Set up Xcode
       uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: 'latest-stable'
-    
+
     - name: Build
       run: swift build
-    
+
     - name: Run tests
       run: swift test
