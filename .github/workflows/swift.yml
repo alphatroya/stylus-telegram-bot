@@ -9,38 +9,34 @@ on:
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Set up Swift
-      uses: swift-actions/setup-swift@v2
-      with:
-        swift-version: '6.2'
-    
+
     - name: Set up mise
       uses: jdx/mise-action@v2
-    
-    - name: Install tools with mise
-      run: mise install
-    
+      with:
+          install: true
+          cache: true
+          experimental: true
+
     - name: Check formatting with swiftformat
       run: swiftformat --lint --strict .
-  
+
   test:
     runs-on: macos-latest
     needs: quality-gate
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Xcode
       uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: 'latest-stable'
-    
+
     - name: Build
       run: swift build
-    
+
     - name: Run tests
       run: swift test
