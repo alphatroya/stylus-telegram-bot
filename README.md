@@ -1,10 +1,11 @@
 # Stylus Telegram Bot
 
-A Telegram bot that captures messages and automatically saves them to daily journal files in Markdown format. Perfect for quickly collecting thoughts, links, and ideas throughout the day and integrating them into your personal knowledge base.
+A Telegram bot that captures messages and automatically saves them to daily journal files in Markdown format. Perfect for quickly collecting thoughts, links, and ideas throughout the day and integrating them into your personal knowledge base. The journal format is compatible with [Logseq](https://logseq.com/).
 
 ## Features
 
 - **Automatic Daily Journals**: Creates and appends entries to date-based journal files (e.g., `2025_11_21.md`)
+- **Logseq Compatible**: Journal format is fully compatible with Logseq for seamless integration
 - **Smart Link Processing**: Automatically fetches page titles for URLs and converts them to Markdown links
 - **Timestamped Entries**: Each entry includes the time it was sent
 - **Task Format**: All entries are saved as TODO items for easy task management
@@ -69,7 +70,7 @@ The bot searches for the config file in the following locations (in order):
 
 - `telegramBotApiKey`: Your Telegram Bot API token (get it from [@BotFather](https://t.me/botfather))
 - `telegramUserId`: Your Telegram user ID (only messages from this user will be processed)
-- `knowledgeBaseLocation`: Path where journal files will be stored (a `journals` subdirectory will be created)
+- `knowledgeBaseLocation`: Path where journal files will be stored (a `journals` subdirectory will be created). Compatible with Logseq graph directories.
 
 ### Getting Your Telegram User ID
 
