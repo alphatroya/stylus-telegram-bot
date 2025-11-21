@@ -83,7 +83,7 @@ struct LinkProcessor {
         // Get unique URLs and sort by length in descending order to avoid partial replacements
         let uniqueUrls = Array(Set(urls)).sorted { $0.count > $1.count }
 
-        // Replace URLs with HTML anchor tags
+        // Replace URLs with Markdown links
         for url in uniqueUrls {
             guard let title = urlTitles[url] else {
                 continue
