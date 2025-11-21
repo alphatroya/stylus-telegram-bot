@@ -1,26 +1,20 @@
 import Foundation
-
-#if canImport(LinkPresentation)
-    import LinkPresentation
-#endif
+import LinkPresentation
 
 // MARK: - LinkProcessor
 
 struct LinkProcessor {
     // MARK: Properties
 
-    #if canImport(LinkPresentation)
-        private let metadataProvider: LinkMetadataProviderProtocol
+    private let metadataProvider: LinkMetadataProviderProtocol
 
-        // MARK: Initialization
+    // MARK: Lifecycle
 
-        init(metadataProvider: LinkMetadataProviderProtocol = LPMetadataProvider()) {
-            self.metadataProvider = metadataProvider
-        }
-    #else
-        // Fallback for platforms without LinkPresentation
-        init() {}
-    #endif
+    // MARK: Initialization
+
+    init(metadataProvider: LinkMetadataProviderProtocol = LPMetadataProvider()) {
+        self.metadataProvider = metadataProvider
+    }
 
     // MARK: Functions
 
@@ -52,13 +46,8 @@ struct LinkProcessor {
             return nil
         }
 
-        #if canImport(LinkPresentation)
-            let metadata = try await metadataProvider.startFetchingMetadata(for: url)
-            return metadata.title
-        #else
-            // Fallback: return nil on non-macOS platforms
-            return nil
-        #endif
+        let metadata = try await metadataProvider.startFetchingMetadata(for: url)
+        return metadata.title
     }
 
     /// Escapes HTML special characters in a string
@@ -107,7 +96,7 @@ struct LinkProcessor {
             let title = urlTitles[url] ?? url
             let escapedTitle = escapeHTML(title)
             let escapedURL = escapeHTML(url)
-            let htmlLink = "<a href=\"\(escapedURL)\">\(escapedTitle)</a>"
+            let htmlLink = "[\(escapedTitle)](\(escapedURL))"
             // Replace all occurrences of this URL
             processedText = processedText.replacingOccurrences(of: url, with: htmlLink)
         }
@@ -116,29 +105,12 @@ struct LinkProcessor {
     }
 }
 
-#if canImport(LinkPresentation)
+// MARK: - LinkMetadataProviderProtocol
 
-    // MARK: - LinkMetadataProviderProtocol
+protocol LinkMetadataProviderProtocol: Sendable {
+    func startFetchingMetadata(for url: URL) async throws -> LPLinkMetadata
+}
 
-    protocol LinkMetadataProviderProtocol: Sendable {
-        func startFetchingMetadata(for url: URL) async throws -> LPLinkMetadata
-    }
+// MARK: - LPMetadataProvider + LinkMetadataProviderProtocol
 
-    // MARK: - LPMetadataProvider + LinkMetadataProviderProtocol
-
-    extension LPMetadataProvider: LinkMetadataProviderProtocol {
-        func startFetchingMetadata(for url: URL) async throws -> LPLinkMetadata {
-            try await withCheckedThrowingContinuation { continuation in
-                self.startFetchingMetadata(for: url) { metadata, error in
-                    if let error {
-                        continuation.resume(throwing: error)
-                    } else if let metadata {
-                        continuation.resume(returning: metadata)
-                    } else {
-                        continuation.resume(throwing: URLError(.badServerResponse))
-                    }
-                }
-            }
-        }
-    }
-#endif
+extension LPMetadataProvider: LinkMetadataProviderProtocol {}
