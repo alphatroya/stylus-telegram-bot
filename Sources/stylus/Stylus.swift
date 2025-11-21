@@ -11,6 +11,7 @@ struct Stylus {
         let bot = TelegramBot(token: config.telegramBotApiKey)
         let journalsPath = (config.knowledgeBaseLocation as NSString).appendingPathComponent("journals")
         try ensureDirectoryExists(at: journalsPath)
+        let linkProcessor = LinkProcessor()
 
         while let update = bot.nextUpdateSync() {
             guard let message = update.message,
@@ -29,7 +30,9 @@ struct Stylus {
 
             do {
                 let timeString = formatDate("HH:mm", date: message.date)
-                let taggedText = addStylusInboxTag(to: text)
+                // Process links first
+                let processedText = await linkProcessor.processLinks(in: text)
+                let taggedText = addStylusInboxTag(to: processedText)
                 let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
 
                 try appendToJournalFile(at: filePath, content: lineToAppend)
