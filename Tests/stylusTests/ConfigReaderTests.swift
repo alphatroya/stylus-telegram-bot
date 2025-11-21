@@ -27,7 +27,7 @@ struct ConfigReaderTests {
 
     @Test func throwsWhenTelegramBotApiKeyMissing() {
         let provider = inMemoryStorage(values: [
-            "telegramUserId": "123456789",
+            "telegramUserId": 123_456_789,
             "knowledgeBaseLocation": "/path/to/knowledge",
         ])
 
@@ -50,7 +50,7 @@ struct ConfigReaderTests {
     @Test func throwsWhenKnowledgeBaseLocationMissing() {
         let provider = inMemoryStorage(values: [
             "telegramBotApiKey": "test-api-key",
-            "telegramUserId": "123456789",
+            "telegramUserId": 123_456_789,
         ])
 
         #expect(throws: (any Error).self) {

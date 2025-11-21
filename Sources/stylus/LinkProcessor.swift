@@ -5,22 +5,6 @@ import RegexBuilder
 // MARK: - LinkProcessor
 
 struct LinkProcessor {
-    // MARK: Properties
-
-    private let metadataProvider: LinkMetadataProviderProtocol
-
-    // MARK: Lifecycle
-
-    // MARK: Initialization
-
-    init(metadataProvider: LinkMetadataProviderProtocol = LPMetadataProvider()) {
-        self.metadataProvider = metadataProvider
-    }
-
-    // MARK: Functions
-
-    // MARK: Methods
-
     /// Extracts all HTTP/HTTPS URLs from the given text
     func extractURLs(from text: String) -> [String] {
         let urlRegex = Regex {
@@ -44,17 +28,22 @@ struct LinkProcessor {
     }
 
     /// Fetches the title of a web page from the given URL
-    func fetchPageTitle(from urlString: String) async throws -> String? {
+    func fetchPageTitle(from urlString: String, provider: LinkMetadataProviderProtocol) async throws -> String? {
         guard let url = URL(string: urlString) else {
             return nil
         }
 
-        let metadata = try await metadataProvider.fetchMetadata(for: url)
+        let metadata = try await provider.fetchMetadata(for: url)
         return metadata.title
     }
 
     /// Processes text to wrap URLs with Markdown links
-    func processLinks(in text: String) async -> String {
+    func processLinks(
+        in text: String,
+        metadataProvider: @escaping @Sendable () -> LinkMetadataProviderProtocol = {
+            LPMetadataProvider()
+        },
+    ) async -> String {
         let urls = extractURLs(from: text)
 
         guard !urls.isEmpty else {
@@ -68,7 +57,11 @@ struct LinkProcessor {
         await withTaskGroup(of: (String, String?).self) { group in
             for url in urls {
                 group.addTask {
-                    let title = try? await fetchPageTitle(from: url)
+                    let provider = metadataProvider()
+                    let title = try? await fetchPageTitle(
+                        from: url,
+                        provider: provider,
+                    )
                     return (url, title)
                 }
             }

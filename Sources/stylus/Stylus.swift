@@ -31,7 +31,9 @@ struct Stylus {
             do {
                 let timeString = formatDate("HH:mm", date: message.date)
                 // Process links first
-                let processedText = await linkProcessor.processLinks(in: text)
+                let processedText = await linkProcessor.processLinks(
+                    in: text,
+                )
                 let taggedText = addStylusInboxTag(to: processedText)
                 let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
 
