@@ -72,6 +72,27 @@ struct LinkProcessorTests {
         #expect(urls.first == "https://google.com")
     }
 
+    @Test("Extract URL with trailing punctuation")
+    func extractURLWithTrailingPunctuation() {
+        let processor = LinkProcessor(urlSession: MockURLSession())
+        let text = "Visit https://example.com. It's great!"
+        let urls = processor.extractURLs(from: text)
+
+        #expect(urls.count == 1)
+        #expect(urls.first == "https://example.com")
+    }
+
+    @Test("Extract duplicate URLs")
+    func extractDuplicateURLs() {
+        let processor = LinkProcessor(urlSession: MockURLSession())
+        let text = "Check https://example.com and https://example.com again"
+        let urls = processor.extractURLs(from: text)
+
+        #expect(urls.count == 2)
+        #expect(urls[0] == "https://example.com")
+        #expect(urls[1] == "https://example.com")
+    }
+
     // MARK: Title Extraction Tests
 
     @Test("Extract title from simple HTML")
@@ -213,6 +234,28 @@ struct LinkProcessorTests {
 
         #expect(result.contains("<a href=\"https://google.com\">Google</a>"))
         #expect(result.contains("<a href=\"https://apple.com\">Apple</a>"))
+    }
+
+    @Test("Process text with duplicate URLs")
+    func processTextWithDuplicateURLs() async throws {
+        let mockSession = MockURLSession()
+        try await mockSession.setMockResponse(
+            #require("<html><head><title>Example</title></head></html>".data(using: .utf8)),
+            #require(HTTPURLResponse(
+                url: #require(URL(string: "https://example.com")),
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil,
+            )),
+        )
+
+        let processor = LinkProcessor(urlSession: mockSession)
+        let text = "Check https://example.com and https://example.com again"
+        let result = await processor.processLinks(in: text)
+
+        // Both occurrences should be replaced
+        let expectedLink = "<a href=\"https://example.com\">Example</a>"
+        #expect(result == "Check \(expectedLink) and \(expectedLink) again")
     }
 }
 

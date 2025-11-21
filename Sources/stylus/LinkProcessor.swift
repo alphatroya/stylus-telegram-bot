@@ -26,7 +26,8 @@ struct LinkProcessor {
     /// Extracts all HTTP/HTTPS URLs from the given text
     func extractURLs(from text: String) -> [String] {
         // Regex pattern to match HTTP and HTTPS URLs
-        let pattern = #"https?://[^\s<>\"{}|\\^`\[\]]+"#
+        // Excludes trailing punctuation that's likely sentence punctuation
+        let pattern = #"https?://[^\s<>\"{}|\\^`\[\]]+(?<![.,;:!?)\]])"#
 
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
             return []
@@ -170,19 +171,17 @@ struct LinkProcessor {
             }
         }
 
-        // Sort URLs by length in descending order to avoid partial replacements
-        let sortedUrls = urls.sorted { $0.count > $1.count }
+        // Get unique URLs and sort by length in descending order to avoid partial replacements
+        let uniqueUrls = Array(Set(urls)).sorted { $0.count > $1.count }
 
         // Replace URLs with HTML anchor tags
-        for url in sortedUrls {
+        for url in uniqueUrls {
             let title = urlTitles[url] ?? url
             let escapedTitle = escapeHTML(title)
             let escapedURL = escapeHTML(url)
             let htmlLink = "<a href=\"\(escapedURL)\">\(escapedTitle)</a>"
-            // Only replace exact matches, not partial
-            if let range = processedText.range(of: url) {
-                processedText.replaceSubrange(range, with: htmlLink)
-            }
+            // Replace all occurrences of this URL
+            processedText = processedText.replacingOccurrences(of: url, with: htmlLink)
         }
 
         return processedText
