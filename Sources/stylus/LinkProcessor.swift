@@ -1,7 +1,7 @@
 import Foundation
 
-#if canImport(FoundationNetworking)
-    import FoundationNetworking
+#if canImport(LinkPresentation)
+    import LinkPresentation
 #endif
 
 // MARK: - LinkProcessor
@@ -9,15 +9,18 @@ import Foundation
 struct LinkProcessor {
     // MARK: Properties
 
-    var urlSession: URLSessionProtocol
+    #if canImport(LinkPresentation)
+        private let metadataProvider: LinkMetadataProviderProtocol
 
-    // MARK: Lifecycle
+        // MARK: Initialization
 
-    // MARK: Initialization
-
-    init(urlSession: URLSessionProtocol = URLSession.shared) {
-        self.urlSession = urlSession
-    }
+        init(metadataProvider: LinkMetadataProviderProtocol = LPMetadataProvider()) {
+            self.metadataProvider = metadataProvider
+        }
+    #else
+        // Fallback for platforms without LinkPresentation
+        init() {}
+    #endif
 
     // MARK: Functions
 
@@ -49,88 +52,13 @@ struct LinkProcessor {
             return nil
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.timeoutInterval = 10
-        // Add user agent to avoid being blocked
-        request.setValue(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-            forHTTPHeaderField: "User-Agent",
-        )
-
-        let (data, response) = try await urlSession.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200 ... 299).contains(httpResponse.statusCode)
-        else {
+        #if canImport(LinkPresentation)
+            let metadata = try await metadataProvider.startFetchingMetadata(for: url)
+            return metadata.title
+        #else
+            // Fallback: return nil on non-macOS platforms
             return nil
-        }
-
-        // Try to extract title from HTML
-        guard let html = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-
-        return extractTitle(from: html)
-    }
-
-    /// Extracts the title from HTML content
-    func extractTitle(from html: String) -> String? {
-        // Look for <title> tag
-        let pattern = #"<title[^>]*>(.*?)</title>"#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators])
-        else {
-            return nil
-        }
-
-        let range = NSRange(html.startIndex..., in: html)
-        guard let match = regex.firstMatch(in: html, options: [], range: range),
-              let titleRange = Range(match.range(at: 1), in: html)
-        else {
-            return nil
-        }
-
-        let title = String(html[titleRange])
-        // Decode HTML entities and clean up whitespace
-        return decodeHTMLEntities(title)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    /// Decodes common HTML entities in a string
-    func decodeHTMLEntities(_ text: String) -> String {
-        var result = text
-
-        // Common named entities
-        let entities: [(String, String)] = [
-            ("&amp;", "&"),
-            ("&lt;", "<"),
-            ("&gt;", ">"),
-            ("&quot;", "\""),
-            ("&#39;", "'"),
-            ("&apos;", "'"),
-            ("&nbsp;", " "),
-        ]
-
-        for (entity, replacement) in entities {
-            result = result.replacingOccurrences(of: entity, with: replacement)
-        }
-
-        // Decode numeric entities (&#123; and &#xAB;)
-        let numericPattern = #"&#(\d+);"#
-        if let regex = try? NSRegularExpression(pattern: numericPattern, options: []) {
-            let matches = regex.matches(in: result, options: [], range: NSRange(result.startIndex..., in: result))
-            for match in matches.reversed() {
-                if let numRange = Range(match.range(at: 1), in: result),
-                   let num = Int(result[numRange]),
-                   let scalar = UnicodeScalar(num)
-                {
-                    let fullRange = Range(match.range, in: result)!
-                    result.replaceSubrange(fullRange, with: String(Character(scalar)))
-                }
-            }
-        }
-
-        return result
+        #endif
     }
 
     /// Escapes HTML special characters in a string
@@ -188,36 +116,29 @@ struct LinkProcessor {
     }
 }
 
-// MARK: - URLSessionProtocol
+#if canImport(LinkPresentation)
 
-protocol URLSessionProtocol: Sendable {
-    func data(for request: URLRequest) async throws -> (Data, URLResponse)
-}
+    // MARK: - LinkMetadataProviderProtocol
 
-// MARK: - URLSession + URLSessionProtocol
+    protocol LinkMetadataProviderProtocol: Sendable {
+        func startFetchingMetadata(for url: URL) async throws -> LPLinkMetadata
+    }
 
-extension URLSession: URLSessionProtocol {
-    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-        #if canImport(FoundationNetworking)
-            // Linux implementation
-            return try await withCheckedThrowingContinuation { continuation in
-                let task = self.dataTask(with: request) { data, response, error in
+    // MARK: - LPMetadataProvider + LinkMetadataProviderProtocol
+
+    extension LPMetadataProvider: LinkMetadataProviderProtocol {
+        func startFetchingMetadata(for url: URL) async throws -> LPLinkMetadata {
+            try await withCheckedThrowingContinuation { continuation in
+                self.startFetchingMetadata(for: url) { metadata, error in
                     if let error {
                         continuation.resume(throwing: error)
-                        return
-                    }
-                    guard let data, let response else {
+                    } else if let metadata {
+                        continuation.resume(returning: metadata)
+                    } else {
                         continuation.resume(throwing: URLError(.badServerResponse))
-                        return
                     }
-
-                    continuation.resume(returning: (data, response))
                 }
-                task.resume()
             }
-        #else
-            // macOS/iOS implementation
-            return try await data(for: request, delegate: nil)
-        #endif
+        }
     }
-}
+#endif
