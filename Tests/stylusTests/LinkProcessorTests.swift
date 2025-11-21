@@ -92,6 +92,15 @@ struct LinkProcessorTests {
         #expect(title == "Cats & Dogs")
     }
 
+    @Test("Extract title with numeric HTML entities")
+    func extractTitleWithNumericHTMLEntities() {
+        let processor = LinkProcessor(urlSession: MockURLSession())
+        let html = "<html><head><title>Test &#65; &#66;</title></head></html>"
+        let title = processor.extractTitle(from: html)
+
+        #expect(title == "Test A B")
+    }
+
     @Test("Extract title with whitespace")
     func extractTitleWithWhitespace() {
         let processor = LinkProcessor(urlSession: MockURLSession())
@@ -115,7 +124,7 @@ struct LinkProcessorTests {
     @Test("Process text with single URL - mock successful fetch")
     func processTextWithSingleURL() async throws {
         let mockSession = MockURLSession()
-        mockSession.mockResponse = try (
+        try await mockSession.setMockResponse(
             #require("<html><head><title>Google</title></head></html>".data(using: .utf8)),
             #require(HTTPURLResponse(
                 url: #require(URL(string: "https://google.com")),
@@ -132,6 +141,26 @@ struct LinkProcessorTests {
         #expect(result == "Hello <a href=\"https://google.com\">Google</a>")
     }
 
+    @Test("Process text with HTML special characters in title")
+    func processTextWithHTMLSpecialCharsInTitle() async throws {
+        let mockSession = MockURLSession()
+        try await mockSession.setMockResponse(
+            #require("<html><head><title>Cats & Dogs <3</title></head></html>".data(using: .utf8)),
+            #require(HTTPURLResponse(
+                url: #require(URL(string: "https://example.com")),
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil,
+            )),
+        )
+
+        let processor = LinkProcessor(urlSession: mockSession)
+        let text = "Visit https://example.com"
+        let result = await processor.processLinks(in: text)
+
+        #expect(result == "Visit <a href=\"https://example.com\">Cats &amp; Dogs &lt;3</a>")
+    }
+
     @Test("Process text with no URLs")
     func processTextWithNoURLs() async {
         let processor = LinkProcessor(urlSession: MockURLSession())
@@ -144,7 +173,7 @@ struct LinkProcessorTests {
     @Test("Process text with URL but failed title fetch")
     func processTextWithURLButFailedTitleFetch() async {
         let mockSession = MockURLSession()
-        mockSession.shouldThrowError = true
+        await mockSession.setShouldThrowError(true)
 
         let processor = LinkProcessor(urlSession: mockSession)
         let text = "Hello https://google.com"
@@ -157,7 +186,7 @@ struct LinkProcessorTests {
     @Test("Process text with multiple URLs")
     func processTextWithMultipleURLs() async throws {
         let mockSession = MockURLSession()
-        mockSession.mockResponses = try [
+        try await mockSession.setMockResponses([
             "https://google.com": (
                 #require("<html><head><title>Google</title></head></html>".data(using: .utf8)),
                 #require(HTTPURLResponse(
@@ -176,7 +205,7 @@ struct LinkProcessorTests {
                     headerFields: nil,
                 )),
             ),
-        ]
+        ])
 
         let processor = LinkProcessor(urlSession: mockSession)
         let text = "Visit https://google.com and https://apple.com"
@@ -189,7 +218,7 @@ struct LinkProcessorTests {
 
 // MARK: - MockURLSession
 
-final class MockURLSession: URLSessionProtocol, @unchecked Sendable {
+actor MockURLSession: URLSessionProtocol {
     // MARK: Properties
 
     var mockResponse: (Data, URLResponse)?
@@ -197,6 +226,18 @@ final class MockURLSession: URLSessionProtocol, @unchecked Sendable {
     var shouldThrowError = false
 
     // MARK: Functions
+
+    func setMockResponse(_ data: Data, _ response: URLResponse) {
+        mockResponse = (data, response)
+    }
+
+    func setMockResponses(_ responses: [String: (Data, URLResponse)]) {
+        mockResponses = responses
+    }
+
+    func setShouldThrowError(_ value: Bool) {
+        shouldThrowError = value
+    }
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         if shouldThrowError {

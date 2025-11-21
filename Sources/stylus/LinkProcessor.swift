@@ -91,13 +91,56 @@ struct LinkProcessor {
 
         let title = String(html[titleRange])
         // Decode HTML entities and clean up whitespace
-        return title
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&quot;", with: "\"")
-            .replacingOccurrences(of: "&#39;", with: "'")
+        return decodeHTMLEntities(title)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Decodes common HTML entities in a string
+    func decodeHTMLEntities(_ text: String) -> String {
+        var result = text
+
+        // Common named entities
+        let entities: [(String, String)] = [
+            ("&amp;", "&"),
+            ("&lt;", "<"),
+            ("&gt;", ">"),
+            ("&quot;", "\""),
+            ("&#39;", "'"),
+            ("&apos;", "'"),
+            ("&nbsp;", " "),
+        ]
+
+        for (entity, replacement) in entities {
+            result = result.replacingOccurrences(of: entity, with: replacement)
+        }
+
+        // Decode numeric entities (&#123; and &#xAB;)
+        let numericPattern = #"&#(\d+);"#
+        if let regex = try? NSRegularExpression(pattern: numericPattern, options: []) {
+            let matches = regex.matches(in: result, options: [], range: NSRange(result.startIndex..., in: result))
+            for match in matches.reversed() {
+                if let numRange = Range(match.range(at: 1), in: result),
+                   let num = Int(result[numRange]),
+                   let scalar = UnicodeScalar(num)
+                {
+                    let fullRange = Range(match.range, in: result)!
+                    result.replaceSubrange(fullRange, with: String(Character(scalar)))
+                }
+            }
+        }
+
+        return result
+    }
+
+    /// Escapes HTML special characters in a string
+    func escapeHTML(_ text: String) -> String {
+        var result = text
+        result = result.replacingOccurrences(of: "&", with: "&amp;")
+        result = result.replacingOccurrences(of: "<", with: "&lt;")
+        result = result.replacingOccurrences(of: ">", with: "&gt;")
+        result = result.replacingOccurrences(of: "\"", with: "&quot;")
+        result = result.replacingOccurrences(of: "'", with: "&#39;")
+        return result
     }
 
     /// Processes text to wrap URLs with HTML anchor tags
@@ -127,11 +170,19 @@ struct LinkProcessor {
             }
         }
 
+        // Sort URLs by length in descending order to avoid partial replacements
+        let sortedUrls = urls.sorted { $0.count > $1.count }
+
         // Replace URLs with HTML anchor tags
-        for url in urls {
+        for url in sortedUrls {
             let title = urlTitles[url] ?? url
-            let htmlLink = "<a href=\"\(url)\">\(title)</a>"
-            processedText = processedText.replacingOccurrences(of: url, with: htmlLink)
+            let escapedTitle = escapeHTML(title)
+            let escapedURL = escapeHTML(url)
+            let htmlLink = "<a href=\"\(escapedURL)\">\(escapedTitle)</a>"
+            // Only replace exact matches, not partial
+            if let range = processedText.range(of: url) {
+                processedText.replaceSubrange(range, with: htmlLink)
+            }
         }
 
         return processedText
