@@ -1,5 +1,6 @@
 import Foundation
 import LinkPresentation
+import RegexBuilder
 
 // MARK: - LinkProcessor
 
@@ -22,21 +23,23 @@ struct LinkProcessor {
 
     /// Extracts all HTTP/HTTPS URLs from the given text
     func extractURLs(from text: String) -> [String] {
-        // Regex pattern to match HTTP and HTTPS URLs
-        // Excludes trailing punctuation that's likely sentence punctuation
-        let pattern = #"https?://[^\s<>\"{}|\\^`\[\]]+(?<![.,;:!?)\]])"#
-
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
-            return []
+        let urlRegex = Regex {
+            "http"
+            Optionally("s")
+            "://"
+            OneOrMore {
+                CharacterClass.anyOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~:/?#[]@!$&'()*+,;=%")
+            }
         }
 
-        let range = NSRange(text.startIndex..., in: text)
-        let matches = regex.matches(in: text, options: [], range: range)
-
-        return matches.compactMap { match in
-            guard let range = Range(match.range, in: text) else { return nil }
-
-            return String(text[range])
+        let matches = text.matches(of: urlRegex)
+        return matches.map { match in
+            let url = String(text[match.range])
+            // Remove trailing punctuation that's likely sentence punctuation
+            while let lastChar = url.last, [".", ",", ";", ":", "!", "?", ")", "]", "\""].contains(lastChar) {
+                return String(url.dropLast())
+            }
+            return url
         }
     }
 
@@ -46,19 +49,8 @@ struct LinkProcessor {
             return nil
         }
 
-        let metadata = try await metadataProvider.startFetchingMetadata(for: url)
+        let metadata = try await metadataProvider.fetchMetadata(for: url)
         return metadata.title
-    }
-
-    /// Escapes HTML special characters in a string
-    func escapeHTML(_ text: String) -> String {
-        var result = text
-        result = result.replacingOccurrences(of: "&", with: "&amp;")
-        result = result.replacingOccurrences(of: "<", with: "&lt;")
-        result = result.replacingOccurrences(of: ">", with: "&gt;")
-        result = result.replacingOccurrences(of: "\"", with: "&quot;")
-        result = result.replacingOccurrences(of: "'", with: "&#39;")
-        return result
     }
 
     /// Processes text to wrap URLs with HTML anchor tags
@@ -93,24 +85,35 @@ struct LinkProcessor {
 
         // Replace URLs with HTML anchor tags
         for url in uniqueUrls {
-            let title = urlTitles[url] ?? url
-            let escapedTitle = escapeHTML(title)
-            let escapedURL = escapeHTML(url)
-            let htmlLink = "[\(escapedTitle)](\(escapedURL))"
-            // Replace all occurrences of this URL
-            processedText = processedText.replacingOccurrences(of: url, with: htmlLink)
+            guard let title = urlTitles[url] else {
+                continue
+            }
+
+            let htmlLink = "[\(title)](\(url))"
+            processedText = processedText.replacing(url, with: htmlLink)
         }
 
         return processedText
     }
 }
 
+// MARK: - LinkMetadata
+
+struct LinkMetadata: Sendable {
+    var title: String?
+}
+
 // MARK: - LinkMetadataProviderProtocol
 
 protocol LinkMetadataProviderProtocol: Sendable {
-    func startFetchingMetadata(for url: URL) async throws -> LPLinkMetadata
+    func fetchMetadata(for url: URL) async throws -> LinkMetadata
 }
 
 // MARK: - LPMetadataProvider + LinkMetadataProviderProtocol
 
-extension LPMetadataProvider: LinkMetadataProviderProtocol {}
+extension LPMetadataProvider: LinkMetadataProviderProtocol {
+    func fetchMetadata(for url: URL) async throws -> LinkMetadata {
+        let meta = try await startFetchingMetadata(for: url)
+        return .init(title: meta.title)
+    }
+}

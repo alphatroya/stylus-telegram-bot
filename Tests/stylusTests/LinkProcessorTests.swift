@@ -1,254 +1,194 @@
 import Foundation
+@preconcurrency import LinkPresentation
 @testable import stylus
 import Testing
-
-#if canImport(LinkPresentation)
-    import LinkPresentation
-#endif
 
 // MARK: - LinkProcessorTests
 
 @Suite("LinkProcessorTests")
 struct LinkProcessorTests {
-    // MARK: URL Extraction Tests
-
-    @Test("Extract single HTTP URL")
-    func extractSingleHTTPURL() {
-        #if canImport(LinkPresentation)
-            let processor = LinkProcessor(metadataProvider: MockMetadataProvider())
-        #else
-            let processor = LinkProcessor()
-        #endif
-        let text = "Check this out http://example.com"
-        let urls = processor.extractURLs(from: text)
-
-        #expect(urls.count == 1)
-        #expect(urls.first == "http://example.com")
+    @Test(arguments: [
+        ("Check out https://example.com", ["https://example.com"]),
+        ("Visit http://test.com and https://another.com", ["http://test.com", "https://another.com"]),
+        ("No links here", []),
+        ("URL at end: https://final.com", ["https://final.com"]),
+        ("URL with path: https://example.com/path/to/page", ["https://example.com/path/to/page"]),
+        ("URL with query: https://example.com?param=value", ["https://example.com?param=value"]),
+        ("URL with fragment: https://example.com#section", ["https://example.com#section"]),
+        ("Visit https://example.com.", ["https://example.com"]),
+        ("Check https://example.com, and this", ["https://example.com"]),
+        ("Link: https://example.com!", ["https://example.com"]),
+        ("See https://example.com?", ["https://example.com"]),
+        ("URL https://example.com;", ["https://example.com"]),
+        ("End with https://example.com:", ["https://example.com"]),
+        ("Parentheses (https://example.com)", ["https://example.com"]),
+    ])
+    func extractURLs(input: String, expected: [String]) {
+        let processor = LinkProcessor()
+        #expect(processor.extractURLs(from: input) == expected)
     }
 
-    @Test("Extract single HTTPS URL")
-    func extractSingleHTTPSURL() {
-        #if canImport(LinkPresentation)
-            let processor = LinkProcessor(metadataProvider: MockMetadataProvider())
-        #else
-            let processor = LinkProcessor()
-        #endif
-        let text = "Check this out https://example.com"
-        let urls = processor.extractURLs(from: text)
+    @Test("Fetch page title successfully")
+    func fetchPageTitleSuccess() async throws {
+        let mockProvider = MockMetadataProvider()
+        await mockProvider.setMockTitle("Test Page Title", for: "https://example.com")
+        let processor = LinkProcessor(metadataProvider: mockProvider)
 
-        #expect(urls.count == 1)
-        #expect(urls.first == "https://example.com")
+        let title = try await processor.fetchPageTitle(from: "https://example.com")
+        #expect(title == "Test Page Title")
     }
 
-    @Test("Extract multiple URLs")
-    func extractMultipleURLs() {
-        #if canImport(LinkPresentation)
-            let processor = LinkProcessor(metadataProvider: MockMetadataProvider())
-        #else
-            let processor = LinkProcessor()
-        #endif
-        let text = "Visit https://google.com and http://apple.com for info"
-        let urls = processor.extractURLs(from: text)
+    @Test("Fetch page title with empty title")
+    func fetchPageTitleEmpty() async throws {
+        let mockProvider = MockMetadataProvider()
+        await mockProvider.setMockTitle("", for: "https://example.com")
+        let processor = LinkProcessor(metadataProvider: mockProvider)
 
-        #expect(urls.count == 2)
-        #expect(urls.contains("https://google.com"))
-        #expect(urls.contains("http://apple.com"))
+        let title = try await processor.fetchPageTitle(from: "https://example.com")
+        #expect(title == "")
     }
 
-    @Test("Extract URL with path and query")
-    func extractURLWithPathAndQuery() {
-        #if canImport(LinkPresentation)
-            let processor = LinkProcessor(metadataProvider: MockMetadataProvider())
-        #else
-            let processor = LinkProcessor()
-        #endif
-        let text = "Go to https://example.com/path/to/page?param=value&other=123"
-        let urls = processor.extractURLs(from: text)
+    @Test("Fetch page title with invalid URL")
+    func fetchPageTitleInvalidURL() async {
+        let processor = LinkProcessor()
 
-        #expect(urls.count == 1)
-        #expect(urls.first == "https://example.com/path/to/page?param=value&other=123")
+        let title = try? await processor.fetchPageTitle(from: "not-a-url")
+        #expect(title == nil)
     }
 
-    @Test("No URLs in text")
-    func noURLsInText() {
-        #if canImport(LinkPresentation)
-            let processor = LinkProcessor(metadataProvider: MockMetadataProvider())
-        #else
-            let processor = LinkProcessor()
-        #endif
-        let text = "This is just plain text without any links"
-        let urls = processor.extractURLs(from: text)
+    @Test("Fetch page title with error")
+    func fetchPageTitleError() async {
+        let mockProvider = MockMetadataProvider()
+        await mockProvider.setShouldThrowError(true)
+        let processor = LinkProcessor(metadataProvider: mockProvider)
 
-        #expect(urls.isEmpty)
-    }
-
-    @Test("Extract URL at end of text")
-    func extractURLAtEndOfText() {
-        #if canImport(LinkPresentation)
-            let processor = LinkProcessor(metadataProvider: MockMetadataProvider())
-        #else
-            let processor = LinkProcessor()
-        #endif
-        let text = "Hello https://google.com"
-        let urls = processor.extractURLs(from: text)
-
-        #expect(urls.count == 1)
-        #expect(urls.first == "https://google.com")
-    }
-
-    @Test("Extract URL with trailing punctuation")
-    func extractURLWithTrailingPunctuation() {
-        #if canImport(LinkPresentation)
-            let processor = LinkProcessor(metadataProvider: MockMetadataProvider())
-        #else
-            let processor = LinkProcessor()
-        #endif
-        let text = "Visit https://example.com. It's great!"
-        let urls = processor.extractURLs(from: text)
-
-        #expect(urls.count == 1)
-        #expect(urls.first == "https://example.com")
-    }
-
-    @Test("Extract duplicate URLs")
-    func extractDuplicateURLs() {
-        #if canImport(LinkPresentation)
-            let processor = LinkProcessor(metadataProvider: MockMetadataProvider())
-        #else
-            let processor = LinkProcessor()
-        #endif
-        let text = "Check https://example.com and https://example.com again"
-        let urls = processor.extractURLs(from: text)
-
-        #expect(urls.count == 2)
-        #expect(urls[0] == "https://example.com")
-        #expect(urls[1] == "https://example.com")
-    }
-
-    // MARK: Link Processing Tests
-
-    #if canImport(LinkPresentation)
-        @Test("Process text with single URL - mock successful fetch")
-        func processTextWithSingleURL() async {
-            let mockProvider = MockMetadataProvider()
-            await mockProvider.setMockTitle("Google", for: "https://google.com")
-
-            let processor = LinkProcessor(metadataProvider: mockProvider)
-            let text = "Hello https://google.com"
-            let result = await processor.processLinks(in: text)
-
-            #expect(result == "Hello <a href=\"https://google.com\">Google</a>")
+        do {
+            _ = try await processor.fetchPageTitle(from: "https://example.com")
+            #expect(Bool(false), "Should have thrown an error")
+        } catch {
+            #expect(Bool(true), "Expected error was thrown")
         }
+    }
 
-        @Test("Process text with HTML special characters in title")
-        func processTextWithHTMLSpecialCharsInTitle() async {
-            let mockProvider = MockMetadataProvider()
-            await mockProvider.setMockTitle("Cats & Dogs <3", for: "https://example.com")
+    @Test("Process links in text with no URLs")
+    func processLinksNoURLs() async {
+        let processor = LinkProcessor()
+        let input = "This text has no links"
 
-            let processor = LinkProcessor(metadataProvider: mockProvider)
-            let text = "Visit https://example.com"
-            let result = await processor.processLinks(in: text)
+        let result = await processor.processLinks(in: input)
+        #expect(result == input)
+    }
 
-            #expect(result == "Visit <a href=\"https://example.com\">Cats &amp; Dogs &lt;3</a>")
-        }
+    @Test("Process links in text with single URL")
+    func processLinksSingleURL() async {
+        let mockProvider = MockMetadataProvider()
+        await mockProvider.setMockTitle("Example Page", for: "https://example.com")
+        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let input = "Visit https://example.com for more info"
 
-        @Test("Process text with URL but failed title fetch")
-        func processTextWithURLButFailedTitleFetch() async {
-            let mockProvider = MockMetadataProvider()
-            await mockProvider.setShouldThrowError(true)
+        let result = await processor.processLinks(in: input)
+        #expect(result == "Visit [Example Page](https://example.com) for more info")
+    }
 
-            let processor = LinkProcessor(metadataProvider: mockProvider)
-            let text = "Hello https://google.com"
-            let result = await processor.processLinks(in: text)
+    @Test("Process links in text with multiple URLs")
+    func processLinksMultipleURLs() async {
+        let mockProvider = MockMetadataProvider()
+        await mockProvider.setMockTitle("Example", for: "https://example.com")
+        await mockProvider.setMockTitle("Test Site", for: "https://test.com")
+        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let input = "Check https://example.com and also https://test.com"
 
-            // Should fall back to URL as title
-            #expect(result == "Hello <a href=\"https://google.com\">https://google.com</a>")
-        }
+        let result = await processor.processLinks(in: input)
+        #expect(result == "Check [Example](https://example.com) and also [Test Site](https://test.com)")
+    }
 
-        @Test("Process text with multiple URLs")
-        func processTextWithMultipleURLs() async {
-            let mockProvider = MockMetadataProvider()
-            await mockProvider.setMockTitle("Google", for: "https://google.com")
-            await mockProvider.setMockTitle("Apple", for: "https://apple.com")
+    @Test("Process links with special characters in title")
+    func processLinksSpecialCharsInTitle() async {
+        let mockProvider = MockMetadataProvider()
+        await mockProvider.setMockTitle("Page with & special <chars>", for: "https://example.com")
+        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let input = "Link: https://example.com"
 
-            let processor = LinkProcessor(metadataProvider: mockProvider)
-            let text = "Visit https://google.com and https://apple.com"
-            let result = await processor.processLinks(in: text)
+        let result = await processor.processLinks(in: input)
+        #expect(result == "Link: [Page with & special <chars>](https://example.com)")
+    }
 
-            #expect(result.contains("<a href=\"https://google.com\">Google</a>"))
-            #expect(result.contains("<a href=\"https://apple.com\">Apple</a>"))
-        }
+    @Test("Process links with special characters in URL")
+    func processLinksSpecialCharsInURL() async {
+        let mockProvider = MockMetadataProvider()
+        await mockProvider.setMockTitle("Test Page", for: "https://example.com/path?param=value&other=123")
+        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let input = "URL: https://example.com/path?param=value&other=123"
 
-        @Test("Process text with duplicate URLs")
-        func processTextWithDuplicateURLs() async {
-            let mockProvider = MockMetadataProvider()
-            await mockProvider.setMockTitle("Example", for: "https://example.com")
+        let result = await processor.processLinks(in: input)
+        #expect(result == "URL: [Test Page](https://example.com/path?param=value&other=123)")
+    }
 
-            let processor = LinkProcessor(metadataProvider: mockProvider)
-            let text = "Check https://example.com and https://example.com again"
-            let result = await processor.processLinks(in: text)
+    @Test("Process links with missing title fallback to URL")
+    func processLinksMissingTitle() async {
+        let mockProvider = MockMetadataProvider()
+        await mockProvider.setMockTitle("", for: "https://example.com")
+        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let input = "Link: https://example.com"
 
-            // Both occurrences should be replaced
-            let expectedLink = "<a href=\"https://example.com\">Example</a>"
-            #expect(result == "Check \(expectedLink) and \(expectedLink) again")
-        }
-    #else
-        @Test("Process text with no URLs on non-macOS")
-        func processTextWithNoURLs() async {
-            let processor = LinkProcessor()
-            let text = "Hello world"
-            let result = await processor.processLinks(in: text)
+        let result = await processor.processLinks(in: input)
+        #expect(result == "Link: https://example.com")
+    }
 
-            #expect(result == "Hello world")
-        }
+    @Test("Process links with duplicate URLs")
+    func processLinksDuplicateURLs() async {
+        let mockProvider = MockMetadataProvider()
+        await mockProvider.setMockTitle("Example", for: "https://example.com")
+        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let input = "Visit https://example.com and https://example.com again"
 
-        @Test("Process text with URL falls back to URL on non-macOS")
-        func processTextWithURLFallback() async {
-            let processor = LinkProcessor()
-            let text = "Hello https://google.com"
-            let result = await processor.processLinks(in: text)
+        let result = await processor.processLinks(in: input)
+        #expect(result == "Visit [Example](https://example.com) and [Example](https://example.com) again")
+    }
 
-            // Should fall back to URL as title on non-macOS
-            #expect(result == "Hello <a href=\"https://google.com\">https://google.com</a>")
-        }
-    #endif
+    @Test("Process links with overlapping URLs")
+    func processLinksOverlappingURLs() async {
+        let mockProvider = MockMetadataProvider()
+        await mockProvider.setMockTitle("Short", for: "https://short.com")
+        await mockProvider.setMockTitle("Long", for: "https://long.com/path")
+        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let input = "Links: https://long.com/path and https://short.com"
+
+        let result = await processor.processLinks(in: input)
+        #expect(result == "Links: [Long](https://long.com/path) and [Short](https://short.com)")
+    }
 }
 
-#if canImport(LinkPresentation)
+// MARK: - MockMetadataProvider
 
-    // MARK: - MockMetadataProvider
+actor MockMetadataProvider: LinkMetadataProviderProtocol {
+    // MARK: Properties
 
-    actor MockMetadataProvider: LinkMetadataProviderProtocol {
-        // MARK: Properties
+    private var mockTitles: [String: String] = [:]
+    private var shouldThrowError = false
 
-        private var mockTitles: [String: String] = [:]
-        private var shouldThrowError = false
+    // MARK: Functions
 
-        // MARK: Functions
-
-        func setMockTitle(_ title: String, for urlString: String) {
-            mockTitles[urlString] = title
-        }
-
-        func setShouldThrowError(_ value: Bool) {
-            shouldThrowError = value
-        }
-
-        func startFetchingMetadata(for url: URL) async throws -> LPLinkMetadata {
-            if shouldThrowError {
-                throw URLError(.badServerResponse)
-            }
-
-            let metadata = LPLinkMetadata()
-            metadata.url = url
-
-            if let title = mockTitles[url.absoluteString] {
-                metadata.title = title
-            } else {
-                metadata.title = "Mock Page"
-            }
-
-            return metadata
-        }
+    func setMockTitle(_ title: String, for urlString: String) {
+        mockTitles[urlString] = title
     }
-#endif
+
+    func setShouldThrowError(_ value: Bool) {
+        shouldThrowError = value
+    }
+
+    func fetchMetadata(for url: URL) async throws -> LinkMetadata {
+        if shouldThrowError {
+            throw URLError(.badServerResponse)
+        }
+
+        var metadata = LinkMetadata()
+        if let title = mockTitles[url.absoluteString] {
+            metadata.title = title
+        } else {
+            metadata.title = "Mock Page"
+        }
+
+        return metadata
+    }
+}
