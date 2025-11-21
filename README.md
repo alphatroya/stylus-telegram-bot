@@ -28,7 +28,7 @@ When you send a message to the bot:
 
 - macOS 15.0 or later
 - Swift 6.2 or later
-- libcurl (for URL metadata fetching)
+- Uses Apple's LinkPresentation framework (for URL metadata fetching, available on macOS 15.0+)
 
 ## Installation
 
@@ -52,13 +52,18 @@ When you send a message to the bot:
 
 ## Configuration
 
-The bot requires a YAML configuration file with the following settings:
+The bot requires a YAML configuration file named `config.yaml` with the following settings:
 
 ```yaml
 telegramBotApiKey: "YOUR_BOT_TOKEN"
 telegramUserId: 123456789
 knowledgeBaseLocation: "/path/to/your/knowledge/base"
 ```
+
+The bot searches for the config file in the following locations (in order):
+1. Current directory: `./config.yaml`
+2. Home config directory: `~/.config/stylus/config.yaml`
+3. Application support directory: `~/Library/Application Support/stylus/config.yaml`
 
 ### Configuration Fields
 
