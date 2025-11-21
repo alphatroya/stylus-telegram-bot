@@ -32,9 +32,9 @@ struct LinkProcessorTests {
     func fetchPageTitleSuccess() async throws {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Test Page Title", for: "https://example.com")
-        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let processor = LinkProcessor()
 
-        let title = try await processor.fetchPageTitle(from: "https://example.com")
+        let title = try await processor.fetchPageTitle(from: "https://example.com", provider: mockProvider)
         #expect(title == "Test Page Title")
     }
 
@@ -42,17 +42,18 @@ struct LinkProcessorTests {
     func fetchPageTitleEmpty() async throws {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("", for: "https://example.com")
-        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let processor = LinkProcessor()
 
-        let title = try await processor.fetchPageTitle(from: "https://example.com")
+        let title = try await processor.fetchPageTitle(from: "https://example.com", provider: mockProvider)
         #expect(title == "")
     }
 
     @Test("Fetch page title with invalid URL")
     func fetchPageTitleInvalidURL() async {
+        let mockProvider = MockMetadataProvider()
         let processor = LinkProcessor()
 
-        let title = try? await processor.fetchPageTitle(from: "not-a-url")
+        let title = try? await processor.fetchPageTitle(from: "", provider: mockProvider)
         #expect(title == nil)
     }
 
@@ -60,10 +61,10 @@ struct LinkProcessorTests {
     func fetchPageTitleError() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setShouldThrowError(true)
-        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let processor = LinkProcessor()
 
         do {
-            _ = try await processor.fetchPageTitle(from: "https://example.com")
+            _ = try await processor.fetchPageTitle(from: "https://example.com", provider: mockProvider)
             #expect(Bool(false), "Should have thrown an error")
         } catch {
             #expect(Bool(true), "Expected error was thrown")
@@ -83,10 +84,10 @@ struct LinkProcessorTests {
     func processLinksSingleURL() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Example Page", for: "https://example.com")
-        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let processor = LinkProcessor()
         let input = "Visit https://example.com for more info"
 
-        let result = await processor.processLinks(in: input)
+        let result = await processor.processLinks(in: input, metadataProvider: { mockProvider })
         #expect(result == "Visit [Example Page](https://example.com) for more info")
     }
 
@@ -95,10 +96,10 @@ struct LinkProcessorTests {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Example", for: "https://example.com")
         await mockProvider.setMockTitle("Test Site", for: "https://test.com")
-        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let processor = LinkProcessor()
         let input = "Check https://example.com and also https://test.com"
 
-        let result = await processor.processLinks(in: input)
+        let result = await processor.processLinks(in: input, metadataProvider: { mockProvider })
         #expect(result == "Check [Example](https://example.com) and also [Test Site](https://test.com)")
     }
 
@@ -106,10 +107,10 @@ struct LinkProcessorTests {
     func processLinksSpecialCharsInTitle() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Page with & special <chars>", for: "https://example.com")
-        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let processor = LinkProcessor()
         let input = "Link: https://example.com"
 
-        let result = await processor.processLinks(in: input)
+        let result = await processor.processLinks(in: input, metadataProvider: { mockProvider })
         #expect(result == "Link: [Page with & special <chars>](https://example.com)")
     }
 
@@ -117,10 +118,10 @@ struct LinkProcessorTests {
     func processLinksSpecialCharsInURL() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Test Page", for: "https://example.com/path?param=value&other=123")
-        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let processor = LinkProcessor()
         let input = "URL: https://example.com/path?param=value&other=123"
 
-        let result = await processor.processLinks(in: input)
+        let result = await processor.processLinks(in: input, metadataProvider: { mockProvider })
         #expect(result == "URL: [Test Page](https://example.com/path?param=value&other=123)")
     }
 
@@ -128,10 +129,10 @@ struct LinkProcessorTests {
     func processLinksMissingTitle() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("", for: "https://example.com")
-        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let processor = LinkProcessor()
         let input = "Link: https://example.com"
 
-        let result = await processor.processLinks(in: input)
+        let result = await processor.processLinks(in: input, metadataProvider: { mockProvider })
         #expect(result == "Link: https://example.com")
     }
 
@@ -139,10 +140,10 @@ struct LinkProcessorTests {
     func processLinksDuplicateURLs() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Example", for: "https://example.com")
-        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let processor = LinkProcessor()
         let input = "Visit https://example.com and https://example.com again"
 
-        let result = await processor.processLinks(in: input)
+        let result = await processor.processLinks(in: input, metadataProvider: { mockProvider })
         #expect(result == "Visit [Example](https://example.com) and [Example](https://example.com) again")
     }
 
@@ -151,10 +152,10 @@ struct LinkProcessorTests {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Short", for: "https://short.com")
         await mockProvider.setMockTitle("Long", for: "https://long.com/path")
-        let processor = LinkProcessor(metadataProvider: mockProvider)
+        let processor = LinkProcessor()
         let input = "Links: https://long.com/path and https://short.com"
 
-        let result = await processor.processLinks(in: input)
+        let result = await processor.processLinks(in: input, metadataProvider: { mockProvider })
         #expect(result == "Links: [Long](https://long.com/path) and [Short](https://short.com)")
     }
 }
