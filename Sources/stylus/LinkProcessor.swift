@@ -53,7 +53,7 @@ struct LinkProcessor {
         return metadata.title
     }
 
-    /// Processes text to wrap URLs with HTML anchor tags
+    /// Processes text to wrap URLs with Markdown links
     func processLinks(in text: String) async -> String {
         let urls = extractURLs(from: text)
 
