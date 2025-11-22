@@ -14,40 +14,78 @@ extension FileHandle: FileHandleProtocol {}
 
 // MARK: - FileWorker
 
-struct FileWorker: Sendable {
-    // MARK: Static Properties
+protocol FileWorker {
+    func homeDirectoryPath() -> String
 
-    static let system: FileWorker = .init()
+    func fileExists(at path: String) -> Bool
 
+    func createDirectory(
+        at: String,
+        createIntermediates: Bool,
+        attributes: [FileAttributeKey: Any]?,
+    ) throws
+
+    func contents(at path: String) throws -> String?
+
+    func writeStringToFile(
+        content: String,
+        path: String,
+        atomically: Bool,
+        encoding: String.Encoding,
+    ) throws
+
+    func fileHandleForWriting(to path: String) throws -> FileHandleProtocol
+}
+
+// MARK: - SystemFileWorker
+
+final class SystemFileWorker: FileWorker {
     // MARK: Properties
 
-    var homeDirectoryPath: @Sendable () -> String = {
+    let fileManager: FileManager
+
+    // MARK: Lifecycle
+
+    init(fileManager: FileManager = .default) {
+        self.fileManager = fileManager
+    }
+
+    // MARK: Functions
+
+    func homeDirectoryPath() -> String {
         ProcessInfo.processInfo.environment["HOME"] ?? FileManager.default.homeDirectoryForCurrentUser.path
     }
 
-    var fileExistsAtPath: @Sendable (String) -> Bool = {
-        FileManager.default.fileExists(atPath: $0)
+    func fileExists(at path: String) -> Bool {
+        fileManager.fileExists(atPath: path)
     }
 
-    var createDirectoryAtPath: @Sendable (String, Bool, [FileAttributeKey: Any]?) throws
-        -> Void = { path, createIntermediates, attributes in
-            try FileManager.default.createDirectory(
-                atPath: path,
-                withIntermediateDirectories: createIntermediates,
-                attributes: attributes,
-            )
-        }
+    func createDirectory(
+        at path: String,
+        createIntermediates: Bool,
+        attributes: [FileAttributeKey: Any]?,
+    ) throws {
+        try fileManager.createDirectory(
+            atPath: path,
+            withIntermediateDirectories: createIntermediates,
+            attributes: attributes,
+        )
+    }
 
-    var contentsAtPath: @Sendable (String) throws -> String? = { path in
+    func contents(at path: String) throws -> String? {
         try String(contentsOfFile: path, encoding: .utf8)
     }
 
-    var writeStringToFile: @Sendable (String, String, Bool, String.Encoding) throws -> Void = {
-        content, path, atomically, encoding in
+    func writeStringToFile(
+        content: String,
+        path: String,
+        atomically: Bool,
+        encoding: String.Encoding,
+    ) throws {
         try content.write(toFile: path, atomically: atomically, encoding: encoding)
     }
 
-    var fileHandleForWritingToPath: @Sendable (String) throws -> FileHandleProtocol = { path in
+    func fileHandleForWriting(to path: String) throws -> FileHandleProtocol {
         try FileHandle(forWritingTo: URL(fileURLWithPath: path))
     }
 }

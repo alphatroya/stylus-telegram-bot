@@ -9,25 +9,30 @@ struct JournalWriter {
 
     // MARK: Lifecycle
 
-    init(fileManager: FileWorker = .system) {
+    init(fileManager: FileWorker = SystemFileWorker()) {
         self.fileManager = fileManager
     }
 
     // MARK: Functions
 
     func ensureDirectoryExists(at path: String) throws {
-        if !fileManager.fileExistsAtPath(path) {
-            try fileManager.createDirectoryAtPath(path, true, nil)
+        if !fileManager.fileExists(at: path) {
+            try fileManager
+                .createDirectory(
+                    at: path,
+                    createIntermediates: true,
+                    attributes: nil,
+                )
         }
     }
 
     func appendToJournalFile(at filePath: String, content: String) throws {
-        if fileManager.fileExistsAtPath(filePath) {
-            let currentContent = try fileManager.contentsAtPath(filePath) ?? ""
+        if fileManager.fileExists(at: filePath) {
+            let currentContent = try fileManager.contents(at: filePath) ?? ""
             let needsNewline = !currentContent.isEmpty && !currentContent.hasSuffix("\n")
             let contentToAppend = needsNewline ? "\n" + content : content
 
-            let fileHandle = try fileManager.fileHandleForWritingToPath(filePath)
+            let fileHandle = try fileManager.fileHandleForWriting(to: filePath)
             defer { fileHandle.closeFile() }
             _ = fileHandle.seekToEndOfFile()
             guard let data = contentToAppend.data(using: .utf8) else {
@@ -36,7 +41,13 @@ struct JournalWriter {
 
             fileHandle.write(data)
         } else {
-            try fileManager.writeStringToFile(content, filePath, true, .utf8)
+            try fileManager
+                .writeStringToFile(
+                    content: content,
+                    path: filePath,
+                    atomically: true,
+                    encoding: .utf8,
+                )
         }
     }
 }

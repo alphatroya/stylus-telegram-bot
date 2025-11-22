@@ -6,24 +6,10 @@ import TelegramBotSDK
 struct Bot {
     // MARK: Properties
 
-    let config: Config
-    let journalWriter: JournalWriter
-    let linkProcessor: LinkProcessor
-    let dateFormatter: StylusDateFormatter
-
-    // MARK: Lifecycle
-
-    init(
-        config: Config,
-        journalWriter: JournalWriter = .init(),
-        linkProcessor: LinkProcessor = .init(),
-        dateFormatter: StylusDateFormatter = .init(),
-    ) {
-        self.config = config
-        self.journalWriter = journalWriter
-        self.linkProcessor = linkProcessor
-        self.dateFormatter = dateFormatter
-    }
+    var config: Config
+    var journalWriter: JournalWriter = .init()
+    var linkProcessor: LinkProcessor = .init()
+    var dateFormatter: StylusDateFormatter = .init()
 
     // MARK: Functions
 
