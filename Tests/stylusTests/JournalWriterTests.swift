@@ -66,7 +66,7 @@ struct JournalWriterTests {
         try writer.appendToJournalFile(at: "/test/file.md", content: "New content\n")
 
         guard let data = writtenData else {
-            #expect(Bool(false), "writtenData should not be nil")
+            Issue.record("writtenData should not be nil")
             return
         }
         let written = String(data: data, encoding: .utf8)
@@ -88,7 +88,7 @@ struct JournalWriterTests {
         try writer.appendToJournalFile(at: "/test/file.md", content: "New content\n")
 
         guard let data = writtenData else {
-            #expect(Bool(false), "writtenData should not be nil")
+            Issue.record("writtenData should not be nil")
             return
         }
         let written = String(data: data, encoding: .utf8)
