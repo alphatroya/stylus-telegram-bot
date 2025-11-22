@@ -2,6 +2,6 @@
 --maxwidth 140
 --wraparguments before-first
 --wrapcollections before-first
---enable isEmpty,organizeDeclarations,markTypes,redundantProperty,blankLineAfterSwitchCase,wrapMultilineFunctionChains,environmentEntry,emptyExtensions,preferSwiftTesting,blankLinesAfterGuardStatements,privateStateVariables,unusedPrivateDeclarations,redundantMemberwiseInit,noGuardInTests,preferSwiftTesting,noForceUnwrapInTests,redundantThrows,redundantAsync,preferFinalClasses
+--enable isEmpty,organizeDeclarations,markTypes,redundantProperty,blankLineAfterSwitchCase
 --lifecycle viewDidLoad,viewWillAppear,viewDidAppear,viewDidDisappear,viewWillDisappear
 --organizationmode type
