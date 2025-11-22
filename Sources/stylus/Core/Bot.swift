@@ -37,11 +37,11 @@ struct Bot {
                 continue
             }
 
-            let messageDateFormatted = formatDate("yyyy_MM_dd", date: message.date)
+            let messageDateFormatted = await formatDate("yyyy_MM_dd", date: message.date)
             let filePath = (journalsPath as NSString).appendingPathComponent("\(messageDateFormatted).md")
 
             do {
-                let timeString = formatDate("HH:mm", date: message.date)
+                let timeString = await formatDate("HH:mm", date: message.date)
                 // Process links first
                 let processedText = await linkProcessor.processLinks(
                     in: text,

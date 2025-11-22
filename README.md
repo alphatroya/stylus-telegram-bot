@@ -119,11 +119,14 @@ Sources/stylus/
 └── Stylus.swift               # Application entry point
 
 Tests/stylusTests/
-├── ConfigReaderTests.swift
-├── DateFormatterTests.swift
-├── JournalWriterTests.swift
-├── LinkProcessorTests.swift
-└── TagManagerTests.swift
+├── Config/
+│   └── ConfigReaderTests.swift
+├── Message/
+│   ├── DateFormatterTests.swift
+│   ├── LinkProcessorTests.swift
+│   └── TagManagerTests.swift
+└── Storage/
+    └── JournalWriterTests.swift
 ```
 
 ### Building and Testing

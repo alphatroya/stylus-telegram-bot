@@ -1,19 +1,15 @@
 import Foundation
 
-// MARK: - StylusDateFormatter
+// MARK: - DateFormatterCache
 
-struct StylusDateFormatter {
-    // MARK: Static Properties
+actor DateFormatterCache {
+    // MARK: Properties
 
-    private static var formatters: [String: DateFormatter] = [:]
-    private static let lock = NSLock()
+    private var formatters: [String: DateFormatter] = [:]
 
-    // MARK: Static Functions
+    // MARK: Functions
 
-    private static func getFormatter(for format: String) -> DateFormatter {
-        lock.lock()
-        defer { lock.unlock() }
-
+    func getFormatter(for format: String) -> DateFormatter {
         if let existing = formatters[format] {
             return existing
         }
@@ -23,16 +19,24 @@ struct StylusDateFormatter {
         formatters[format] = formatter
         return formatter
     }
+}
+
+// MARK: - StylusDateFormatter
+
+struct StylusDateFormatter {
+    // MARK: Static Properties
+
+    private static let cache = DateFormatterCache()
 
     // MARK: Functions
 
-    func formatDate(_ format: String, date: Date) -> String {
-        let formatter = Self.getFormatter(for: format)
+    func formatDate(_ format: String, date: Date) async -> String {
+        let formatter = await Self.cache.getFormatter(for: format)
         return formatter.string(from: date)
     }
 }
 
 // Convenience function for backward compatibility
-func formatDate(_ format: String, date: Date) -> String {
-    StylusDateFormatter().formatDate(format, date: date)
+func formatDate(_ format: String, date: Date) async -> String {
+    await StylusDateFormatter().formatDate(format, date: date)
 }

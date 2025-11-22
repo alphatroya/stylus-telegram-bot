@@ -18,10 +18,10 @@ struct LinkProcessor {
 
         let matches = text.matches(of: urlRegex)
         return matches.map { match in
-            var url = String(text[match.range])
+            let url = String(text[match.range])
             // Remove trailing punctuation that's likely sentence punctuation
             while let lastChar = url.last, [".", ",", ";", ":", "!", "?", ")", "]", "\""].contains(lastChar) {
-                url.removeLast()
+                return String(url.dropLast())
             }
             return url
         }

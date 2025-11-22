@@ -12,7 +12,7 @@ struct JournalWriterTests {
             fileExistsAtPath: { _ in false },
             createDirectoryAtPath: { _, _, _ in
                 createDirectoryCalled = true
-            }
+            },
         )
         let writer = JournalWriter(fileManager: fileWorker)
 
@@ -27,7 +27,7 @@ struct JournalWriterTests {
             fileExistsAtPath: { _ in true },
             createDirectoryAtPath: { _, _, _ in
                 createDirectoryCalled = true
-            }
+            },
         )
         let writer = JournalWriter(fileManager: fileWorker)
 
@@ -42,7 +42,7 @@ struct JournalWriterTests {
             fileExistsAtPath: { _ in false },
             writeStringToFile: { content, _, _, _ in
                 writtenContent = content
-            }
+            },
         )
         let writer = JournalWriter(fileManager: fileWorker)
 
@@ -59,7 +59,7 @@ struct JournalWriterTests {
         let fileWorker = FileWorker(
             fileExistsAtPath: { _ in true },
             contentsAtPath: { _ in "Existing content\n" },
-            fileHandleForWritingToPath: { _ in mockFileHandle }
+            fileHandleForWritingToPath: { _ in mockFileHandle },
         )
         let writer = JournalWriter(fileManager: fileWorker)
 
@@ -78,7 +78,7 @@ struct JournalWriterTests {
         let fileWorker = FileWorker(
             fileExistsAtPath: { _ in true },
             contentsAtPath: { _ in "Existing content without newline" },
-            fileHandleForWritingToPath: { _ in mockFileHandle }
+            fileHandleForWritingToPath: { _ in mockFileHandle },
         )
         let writer = JournalWriter(fileManager: fileWorker)
 
@@ -92,7 +92,7 @@ struct JournalWriterTests {
 
 // MARK: - MockFileHandle
 
-class MockFileHandle: FileHandleProtocol {
+final class MockFileHandle: FileHandleProtocol {
     // MARK: Properties
 
     private let writeCallback: (Data) -> Void
