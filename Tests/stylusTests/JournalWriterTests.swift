@@ -65,8 +65,11 @@ struct JournalWriterTests {
 
         try writer.appendToJournalFile(at: "/test/file.md", content: "New content\n")
 
-        #expect(writtenData != nil)
-        let written = String(data: writtenData!, encoding: .utf8)
+        guard let data = writtenData else {
+            #expect(Bool(false), "writtenData should not be nil")
+            return
+        }
+        let written = String(data: data, encoding: .utf8)
         #expect(written == "New content\n")
     }
 
@@ -84,8 +87,11 @@ struct JournalWriterTests {
 
         try writer.appendToJournalFile(at: "/test/file.md", content: "New content\n")
 
-        #expect(writtenData != nil)
-        let written = String(data: writtenData!, encoding: .utf8)
+        guard let data = writtenData else {
+            #expect(Bool(false), "writtenData should not be nil")
+            return
+        }
+        let written = String(data: data, encoding: .utf8)
         #expect(written == "\nNew content\n")
     }
 }
