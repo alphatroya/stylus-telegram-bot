@@ -28,13 +28,13 @@ struct JournalWriter {
             let contentToAppend = needsNewline ? "\n" + content : content
 
             let fileHandle = try fileManager.fileHandleForWritingToPath(filePath)
+            defer { fileHandle.closeFile() }
             _ = fileHandle.seekToEndOfFile()
             guard let data = contentToAppend.data(using: .utf8) else {
                 throw NSError(domain: "StringEncodingError", code: 1, userInfo: nil)
             }
 
             fileHandle.write(data)
-            fileHandle.closeFile()
         } else {
             try fileManager.writeStringToFile(content, filePath, true, .utf8)
         }

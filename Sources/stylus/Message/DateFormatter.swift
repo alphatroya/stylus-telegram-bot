@@ -9,15 +9,16 @@ actor DateFormatterCache {
 
     // MARK: Functions
 
-    func getFormatter(for format: String) -> DateFormatter {
+    func formatDate(_ format: String, date: Date) -> String {
+        let formatter: DateFormatter
         if let existing = formatters[format] {
-            return existing
+            formatter = existing
+        } else {
+            formatter = DateFormatter()
+            formatter.dateFormat = format
+            formatters[format] = formatter
         }
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = format
-        formatters[format] = formatter
-        return formatter
+        return formatter.string(from: date)
     }
 }
 
@@ -31,7 +32,6 @@ struct StylusDateFormatter {
     // MARK: Functions
 
     func formatDate(_ format: String, date: Date) async -> String {
-        let formatter = await Self.cache.getFormatter(for: format)
-        return formatter.string(from: date)
+        await Self.cache.formatDate(format, date: date)
     }
 }
