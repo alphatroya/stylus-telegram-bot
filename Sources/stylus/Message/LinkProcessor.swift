@@ -21,7 +21,7 @@ struct LinkProcessor {
             var url = String(text[match.range])
             // Remove trailing punctuation that's likely sentence punctuation
             while let lastChar = url.last, [".", ",", ";", ":", "!", "?", ")", "]", "\""].contains(lastChar) {
-                url = String(url.dropLast())
+                url.removeLast()
             }
             return url
         }
