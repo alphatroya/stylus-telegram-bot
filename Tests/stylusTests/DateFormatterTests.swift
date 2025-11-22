@@ -2,10 +2,10 @@ import Foundation
 @testable import stylus
 import Testing
 
-// MARK: - DateFormatTests
+// MARK: - DateFormatterTests
 
-@Suite("DateFormatTests")
-struct DateFormatTests {
+@Suite("DateFormatterTests")
+struct DateFormatterTests {
     @Test(arguments: [
         ("yyyy-MM-dd", 1_609_459_200.0, "2021-01-01"),
         ("dd/MM/yy", 1_609_459_200.0, "01/01/21"),

@@ -104,14 +104,26 @@ Check out this article https://swift.org/blog/announcing-swift-6/
 
 ```
 Sources/stylus/
-├── Stylus.swift           # Main entry point and bot logic
-├── LinkProcessor.swift     # URL extraction and metadata fetching
-├── TagManager.swift        # Tag management functionality
-├── DateFormat.swift        # Date formatting utilities
-├── FileWorker.swift        # File system operations
-└── Config/
-    ├── ConfigReader.swift  # Configuration parsing
-    └── ConfigPath.swift    # Configuration file path resolution
+├── Core/
+│   └── Bot.swift              # Main bot logic and message handling
+├── Message/
+│   ├── DateFormatter.swift    # Date formatting utilities
+│   ├── LinkProcessor.swift    # URL extraction and metadata fetching
+│   └── TagManager.swift       # Tag management functionality
+├── Storage/
+│   ├── FileWorker.swift       # File system operations protocol
+│   └── JournalWriter.swift    # Journal file writing operations
+├── Config/
+│   ├── ConfigReader.swift     # Configuration parsing
+│   └── ConfigPath.swift       # Configuration file path resolution
+└── Stylus.swift               # Application entry point
+
+Tests/stylusTests/
+├── ConfigReaderTests.swift
+├── DateFormatterTests.swift
+├── JournalWriterTests.swift
+├── LinkProcessorTests.swift
+└── TagManagerTests.swift
 ```
 
 ### Building and Testing
