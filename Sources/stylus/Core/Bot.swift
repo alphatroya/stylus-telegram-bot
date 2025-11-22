@@ -9,13 +9,20 @@ struct Bot {
     let config: Config
     let journalWriter: JournalWriter
     let linkProcessor: LinkProcessor
+    let dateFormatter: StylusDateFormatter
 
     // MARK: Lifecycle
 
-    init(config: Config, journalWriter: JournalWriter = .init(), linkProcessor: LinkProcessor = .init()) {
+    init(
+        config: Config,
+        journalWriter: JournalWriter = .init(),
+        linkProcessor: LinkProcessor = .init(),
+        dateFormatter: StylusDateFormatter = .init(),
+    ) {
         self.config = config
         self.journalWriter = journalWriter
         self.linkProcessor = linkProcessor
+        self.dateFormatter = dateFormatter
     }
 
     // MARK: Functions
@@ -37,11 +44,11 @@ struct Bot {
                 continue
             }
 
-            let messageDateFormatted = await formatDate("yyyy_MM_dd", date: message.date)
+            let messageDateFormatted = await dateFormatter.formatDate("yyyy_MM_dd", date: message.date)
             let filePath = (journalsPath as NSString).appendingPathComponent("\(messageDateFormatted).md")
 
             do {
-                let timeString = await formatDate("HH:mm", date: message.date)
+                let timeString = await dateFormatter.formatDate("HH:mm", date: message.date)
                 // Process links first
                 let processedText = await linkProcessor.processLinks(
                     in: text,

@@ -18,7 +18,8 @@ struct DateFormatterTests {
     ])
     func formatsDateWithPattern(format: String, timestamp: TimeInterval, expected: String) async {
         let date = Date(timeIntervalSince1970: timestamp)
-        let result = await formatDate(format, date: date)
+        let formatter = StylusDateFormatter()
+        let result = await formatter.formatDate(format, date: date)
         #expect(result == expected)
     }
 }

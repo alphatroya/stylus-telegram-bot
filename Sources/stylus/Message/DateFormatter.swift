@@ -35,8 +35,3 @@ struct StylusDateFormatter {
         return formatter.string(from: date)
     }
 }
-
-// Convenience function for backward compatibility
-func formatDate(_ format: String, date: Date) async -> String {
-    await StylusDateFormatter().formatDate(format, date: date)
-}
