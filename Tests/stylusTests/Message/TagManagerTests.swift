@@ -2,10 +2,10 @@ import Foundation
 @testable import stylus
 import Testing
 
-// MARK: - StylusTagTests
+// MARK: - TagManagerTests
 
-@Suite("StylusTagTests")
-struct StylusTagTests {
+@Suite("TagManagerTests")
+struct TagManagerTests {
     @Test(arguments: [
         ("Hello world", "Hello world #stylus-inbox"),
         ("", ""),

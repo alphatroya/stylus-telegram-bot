@@ -1,5 +1,4 @@
 import Foundation
-import TelegramBotSDK
 
 // MARK: - Stylus
 
@@ -7,74 +6,7 @@ import TelegramBotSDK
 struct Stylus {
     static func main() async throws {
         let config = try await readConfig(provider: yamlProvider())
-
-        let bot = TelegramBot(token: config.telegramBotApiKey)
-        let journalsPath = (config.knowledgeBaseLocation as NSString).appendingPathComponent("journals")
-        try ensureDirectoryExists(at: journalsPath)
-        let linkProcessor = LinkProcessor()
-
-        while let update = bot.nextUpdateSync() {
-            guard let message = update.message,
-                  let from = message.from,
-                  let text = message.text
-            else {
-                continue
-            }
-            guard from.id == config.telegramUserID else {
-                print("Wrong user sent a message, \(from.id) - \(from.username ?? "NONE")")
-                continue
-            }
-
-            let messageDateFormatted = formatDate("yyyy_MM_dd", date: message.date)
-            let filePath = (journalsPath as NSString).appendingPathComponent("\(messageDateFormatted).md")
-
-            do {
-                let timeString = formatDate("HH:mm", date: message.date)
-                // Process links first
-                let processedText = await linkProcessor.processLinks(
-                    in: text,
-                )
-                let taggedText = addStylusInboxTag(to: processedText)
-                let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
-
-                try appendToJournalFile(at: filePath, content: lineToAppend)
-
-                print("Successfully added to journal: \(filePath)")
-                bot.sendMessageAsync(
-                    chatId: .chat(from.id),
-                    text: "✅ Entry saved to your journal",
-                    replyToMessageId: message.messageId,
-                )
-            } catch {
-                print("Error: \(error)")
-            }
-        }
-
-        fatalError("Server stopped due to error: \(bot.lastError, default: "NONE")")
-    }
-}
-
-func ensureDirectoryExists(at path: String, fileManager: FileWorker = .system) throws {
-    if !fileManager.fileExistsAtPath(path) {
-        try fileManager.createDirectoryAtPath(path, true, nil)
-    }
-}
-
-func appendToJournalFile(at filePath: String, content: String, fileManager: FileWorker = .system) throws {
-    if fileManager.fileExistsAtPath(filePath) {
-        let currentContent = try fileManager.contentsAtPath(filePath) ?? ""
-        let needsNewline = !currentContent.isEmpty && !currentContent.hasSuffix("\n")
-        let contentToAppend = needsNewline ? "\n" + content : content
-
-        let fileHandle = try fileManager.fileHandleForWritingToPath(filePath)
-        _ = fileHandle.seekToEndOfFile()
-        guard let data = contentToAppend.data(using: .utf8) else {
-            throw NSError(domain: "StringEncodingError", code: 1, userInfo: nil)
-        }
-
-        fileHandle.write(data)
-        fileHandle.closeFile()
-    } else {
-        try fileManager.writeStringToFile(content, filePath, true, .utf8)
+        let bot = Bot(config: config)
+        try await bot.run()
     }
 }
