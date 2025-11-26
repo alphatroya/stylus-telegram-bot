@@ -185,7 +185,7 @@ actor MockMetadataProvider: LinkMetadataProviderProtocol {
             throw URLError(.badServerResponse)
         }
 
-        var metadata = try LinkMetadata(url: #require(URL(string: "https://example.com")))
+        var metadata = LinkMetadata(url: url)
         if let title = mockTitles[url.absoluteString] {
             metadata.title = title
         } else {
