@@ -28,13 +28,13 @@ struct LinkProcessor {
     }
 
     /// Fetches the title of a web page from the given URL
-    func fetchPageTitle(from urlString: String, provider: LinkMetadataProviderProtocol) async throws -> String? {
+    func fetchPageTitle(from urlString: String, provider: LinkMetadataProviderProtocol) async throws -> (String?, URL)? {
         guard let url = URL(string: urlString) else {
             return nil
         }
 
         let metadata = try await provider.fetchMetadata(for: url)
-        return metadata.title
+        return (metadata.title, metadata.url)
     }
 
     /// Processes text to wrap URLs with Markdown links
@@ -58,11 +58,14 @@ struct LinkProcessor {
             for url in urls {
                 group.addTask {
                     let provider = metadataProvider()
-                    let title = try? await fetchPageTitle(
+                    guard let meta = try? await fetchPageTitle(
                         from: url,
                         provider: provider,
-                    )
-                    return (url, title)
+                    ) else {
+                        return (url, nil)
+                    }
+
+                    return (meta.1.absoluteString, meta.0)
                 }
             }
 
@@ -94,6 +97,7 @@ struct LinkProcessor {
 
 struct LinkMetadata: Sendable {
     var title: String?
+    var url: URL
 }
 
 // MARK: - LinkMetadataProviderProtocol
@@ -107,6 +111,6 @@ protocol LinkMetadataProviderProtocol: Sendable {
 extension LPMetadataProvider: LinkMetadataProviderProtocol {
     func fetchMetadata(for url: URL) async throws -> LinkMetadata {
         let meta = try await startFetchingMetadata(for: url)
-        return .init(title: meta.title)
+        return .init(title: meta.title, url: meta.url ?? url)
     }
 }

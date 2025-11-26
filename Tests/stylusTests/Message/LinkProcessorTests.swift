@@ -34,7 +34,8 @@ struct LinkProcessorTests {
         await mockProvider.setMockTitle("Test Page Title", for: "https://example.com")
         let processor = LinkProcessor()
 
-        let title = try await processor.fetchPageTitle(from: "https://example.com", provider: mockProvider)
+        let meta = try await processor.fetchPageTitle(from: "https://example.com", provider: mockProvider)
+        let title = try #require(meta).0
         #expect(title == "Test Page Title")
     }
 
@@ -44,7 +45,8 @@ struct LinkProcessorTests {
         await mockProvider.setMockTitle("", for: "https://example.com")
         let processor = LinkProcessor()
 
-        let title = try await processor.fetchPageTitle(from: "https://example.com", provider: mockProvider)
+        let meta = try await processor.fetchPageTitle(from: "https://example.com", provider: mockProvider)
+        let title = try #require(meta).0
         #expect(title == "")
     }
 
@@ -183,7 +185,7 @@ actor MockMetadataProvider: LinkMetadataProviderProtocol {
             throw URLError(.badServerResponse)
         }
 
-        var metadata = LinkMetadata()
+        var metadata = try LinkMetadata(url: #require(URL(string: "https://example.com")))
         if let title = mockTitles[url.absoluteString] {
             metadata.title = title
         } else {
