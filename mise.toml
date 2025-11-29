@@ -1,3 +1,4 @@
 [tools]
 "go:github.com/idursun/jjui/cmd/jjui" = "latest"
+"go:github.com/steveyegge/beads/cmd/bd" = "latest"
 swiftformat = "latest"
