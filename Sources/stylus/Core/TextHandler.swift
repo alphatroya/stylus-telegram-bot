@@ -20,7 +20,6 @@ struct JournalEntryProcessor: JournalEntryProcessorProtocol {
     private let linkProcessor: LinkProcessor
     private let dateFormatter: StylusDateFormatter
 
-    // MARK: Lifecycle
 
     // MARK: Initialization
 
