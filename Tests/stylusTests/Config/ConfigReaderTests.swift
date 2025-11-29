@@ -20,7 +20,8 @@ struct ConfigReaderTests {
 
         let config = try readConfig(provider: provider)
 
-        #expect(config.telegramBotApiKey == "test-api-key")
+        #expect(config.telegramBotApiKey == SecretString("test-api-key"))
+        #expect(config.telegramBotApiKey.unsafeValue == "test-api-key")
         #expect(config.telegramUserID == 123_456_789)
         #expect(config.knowledgeBaseLocation == "/path/to/knowledge")
     }
@@ -64,5 +65,32 @@ struct ConfigReaderTests {
         #expect(throws: (any Error).self) {
             try readConfig(provider: provider)
         }
+    }
+
+    @Test func secretStringHidesValueInDescription() {
+        let secret = SecretString("super-secret-api-key")
+
+        #expect(String(describing: secret) == "[REDACTED]")
+        #expect(String(reflecting: secret) == "[REDACTED]")
+        #expect(secret.unsafeValue == "super-secret-api-key")
+    }
+
+    @Test func configHidesApiKeyInDescription() throws {
+        let provider = inMemoryStorage(values: [
+            "telegramBotApiKey": "secret-token-12345",
+            "telegramUserId": 987_654_321,
+            "knowledgeBaseLocation": "/home/user/knowledge",
+        ])
+
+        let config = try readConfig(provider: provider)
+        let description = String(describing: config)
+        let debugDescription = String(reflecting: config)
+
+        // API key should be redacted in descriptions
+        #expect(!description.contains("secret-token-12345"))
+        #expect(!debugDescription.contains("secret-token-12345"))
+        #expect(description.contains("[REDACTED]"))
+        #expect(description.contains("987654321"))
+        #expect(description.contains("/home/user/knowledge"))
     }
 }

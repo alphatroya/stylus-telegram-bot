@@ -14,7 +14,7 @@ struct Bot {
     // MARK: Functions
 
     func run() async throws {
-        let bot = TelegramBot(token: config.telegramBotApiKey)
+        let bot = TelegramBot(token: config.telegramBotApiKey.unsafeValue)
         let journalsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("journals")
         try journalWriter.ensureDirectoryExists(at: journalsURL.path)
 
