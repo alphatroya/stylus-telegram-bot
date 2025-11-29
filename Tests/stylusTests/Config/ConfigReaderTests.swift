@@ -3,6 +3,22 @@ import Foundation
 @testable import stylus
 import Testing
 
+// MARK: - SecretString + Equatable
+
+extension SecretString: Equatable {
+    public static func == (lhs: SecretString, rhs: SecretString) -> Bool {
+        lhs.unsafeValue == rhs.unsafeValue
+    }
+}
+
+// MARK: - SecretString + Hashable
+
+extension SecretString: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(unsafeValue)
+    }
+}
+
 private func inMemoryStorage(values: [String: ConfigValue] = [:]) -> InMemoryProvider {
     InMemoryProvider(name: "provider", values: values)
 }

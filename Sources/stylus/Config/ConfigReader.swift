@@ -45,22 +45,6 @@ extension SecretString: CustomDebugStringConvertible {
     }
 }
 
-// MARK: Equatable
-
-extension SecretString: Equatable {
-    static func == (lhs: SecretString, rhs: SecretString) -> Bool {
-        lhs.value == rhs.value
-    }
-}
-
-// MARK: Hashable
-
-extension SecretString: Hashable {
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(value)
-    }
-}
-
 // MARK: Codable
 
 extension SecretString: Codable {
