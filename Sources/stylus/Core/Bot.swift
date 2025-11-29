@@ -8,7 +8,7 @@ struct Bot {
 
     var config: Config
     var journalWriter: JournalWriter = .init()
-    var linkProcessor: LinkProcessor = .init()
+    var journalEntryProcessor: JournalEntryProcessor = .init()
     var dateFormatter: StylusDateFormatter = .init()
 
     // MARK: Functions
@@ -27,6 +27,9 @@ struct Bot {
                 print("Skipping update - message has no text content")
                 continue
             }
+            guard let text = message.text else {
+                continue
+            }
             guard from.id == config.telegramUserID else {
                 print("Wrong user sent a message, \(from.id) - \(from.username ?? "NONE")")
                 continue
@@ -36,15 +39,15 @@ struct Bot {
             let filePath = (journalsPath as NSString).appendingPathComponent("\(messageDateFormatted).md")
 
             do {
-                let timeString = await dateFormatter.formatDate("HH:mm", date: message.date)
-                // Process links first
-                let processedText = await linkProcessor.processLinks(
-                    in: text,
-                )
-                let taggedText = addStylusInboxTag(to: processedText)
-                let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
-
-                try journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
+                if let text = message.text {
+                    try await journalEntryProcessor.handleTextMessage(
+                        message,
+                        text: text,
+                        journalsPath: journalsPath,
+                    )
+                } else {
+                    continue
+                }
 
                 print("Successfully added to journal: \(filePath)")
                 bot.sendMessageAsync(
