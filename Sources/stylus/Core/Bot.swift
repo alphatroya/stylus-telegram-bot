@@ -15,7 +15,7 @@ struct Bot {
 
     func run() async throws {
         let bot = TelegramBot(token: config.telegramBotApiKey)
-        let journalsPath = (config.knowledgeBaseLocation as NSString).appendingPathComponent("journals")
+        let journalsPath = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("journals").path
         try journalWriter.ensureDirectoryExists(at: journalsPath)
 
         while let update = bot.nextUpdateSync() {
@@ -33,7 +33,7 @@ struct Bot {
             }
 
             let messageDateFormatted = await dateFormatter.formatDate("yyyy_MM_dd", date: message.date)
-            let filePath = (journalsPath as NSString).appendingPathComponent("\(messageDateFormatted).md")
+            let filePath = URL(fileURLWithPath: journalsPath).appendingPathComponent("\(messageDateFormatted).md").path
 
             do {
                 let timeString = await dateFormatter.formatDate("HH:mm", date: message.date)
