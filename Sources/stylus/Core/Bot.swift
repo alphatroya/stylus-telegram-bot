@@ -19,10 +19,12 @@ struct Bot {
         try journalWriter.ensureDirectoryExists(at: journalsPath)
 
         while let update = bot.nextUpdateSync() {
-            guard let message = update.message,
-                  let from = message.from,
-                  let text = message.text
-            else {
+            guard let message = update.message, let from = message.from else {
+                print("Skipping update - missing message or sender information")
+                continue
+            }
+            guard let text = message.text else {
+                print("Skipping update - message has no text content")
                 continue
             }
             guard from.id == config.telegramUserID else {
