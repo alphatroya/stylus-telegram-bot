@@ -6,7 +6,7 @@ import Testing
 // MARK: - SecretString + Equatable
 
 extension SecretString: Equatable {
-    static func == (lhs: SecretString, rhs: SecretString) -> Bool {
+    public static func == (lhs: SecretString, rhs: SecretString) -> Bool {
         lhs.unsafeValue == rhs.unsafeValue
     }
 }
@@ -14,7 +14,7 @@ extension SecretString: Equatable {
 // MARK: - SecretString + Hashable
 
 extension SecretString: Hashable {
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(unsafeValue)
     }
 }
