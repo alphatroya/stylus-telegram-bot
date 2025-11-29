@@ -24,6 +24,7 @@ struct Bot {
                 continue
             }
             guard let text = message.text else {
+                print("Skipping update - message has no text content")
                 continue
             }
             guard from.id == config.telegramUserID else {
