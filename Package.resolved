@@ -1,76 +1,68 @@
 {
-  "originHash" : "806429e203a88672bf28fd2846eb17783b0f128520810b0fad11bbb6755d5aae",
+  "originHash" : "8d59237da986dc774cd84ad8059183d586b2ac459038860ad97eae1f67c611e4",
   "pins" : [
     {
-      "identity" : "swift-async-algorithms",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-async-algorithms.git",
+      "identity" : "apple.swift-async-algorithms",
+      "kind" : "registry",
+      "location" : "",
       "state" : {
-        "revision" : "042e1c4d9d19748c9c228f8d4ebc97bb1e339b0b",
-        "version" : "1.0.4"
+        "version" : "1.1.0"
       }
     },
     {
-      "identity" : "swift-collections",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections.git",
+      "identity" : "apple.swift-collections",
+      "kind" : "registry",
+      "location" : "",
       "state" : {
-        "revision" : "7b847a3b7008b2dc2f47ca3110d8c782fb2e5c7e",
         "version" : "1.3.0"
       }
     },
     {
-      "identity" : "swift-configuration",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-configuration.git",
+      "identity" : "apple.swift-configuration",
+      "kind" : "registry",
+      "location" : "",
       "state" : {
-        "revision" : "9d5e40727efd060fb9b41b69932738f478abaa43",
         "version" : "0.2.0"
       }
     },
     {
-      "identity" : "swift-log",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-log.git",
+      "identity" : "apple.swift-log",
+      "kind" : "registry",
+      "location" : "",
       "state" : {
-        "revision" : "ce592ae52f982c847a4efc0dd881cc9eb32d29f2",
         "version" : "1.6.4"
       }
     },
     {
-      "identity" : "swift-service-lifecycle",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swift-server/swift-service-lifecycle",
+      "identity" : "apple.swift-system",
+      "kind" : "registry",
+      "location" : "",
       "state" : {
-        "revision" : "1de37290c0ab3c5a96028e0f02911b672fd42348",
-        "version" : "2.9.1"
-      }
-    },
-    {
-      "identity" : "swift-system",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-system",
-      "state" : {
-        "revision" : "395a77f0aa927f0ff73941d7ac35f2b46d47c9db",
         "version" : "1.6.3"
       }
     },
     {
-      "identity" : "telegram-bot-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/rapierorg/telegram-bot-swift",
+      "identity" : "jpsim.Yams",
+      "kind" : "registry",
+      "location" : "",
       "state" : {
-        "revision" : "7b1144b867ca962e10b1de21c32ab7156e4a83ce",
+        "version" : "6.2.0"
+      }
+    },
+    {
+      "identity" : "rapierorg.telegram-bot-swift",
+      "kind" : "registry",
+      "location" : "",
+      "state" : {
         "version" : "2.1.3"
       }
     },
     {
-      "identity" : "yams",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/jpsim/Yams",
+      "identity" : "swift-server.swift-service-lifecycle",
+      "kind" : "registry",
+      "location" : "",
       "state" : {
-        "revision" : "51b5127c7fb6ffac106ad6d199aaa33c5024895f",
-        "version" : "6.2.0"
+        "version" : "2.9.1"
       }
     }
   ],
