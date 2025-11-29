@@ -22,6 +22,12 @@ struct LinkProcessorTests {
         ("URL https://example.com;", ["https://example.com"]),
         ("End with https://example.com:", ["https://example.com"]),
         ("Parentheses (https://example.com)", ["https://example.com"]),
+        ("Multiple punctuation https://example.com...", ["https://example.com"]),
+        ("Mixed punctuation https://example.com.,!?", ["https://example.com"]),
+        ("Quotes 'https://example.com'", ["https://example.com"]),
+        ("Backticks `https://example.com`", ["https://example.com"]),
+        ("Angle brackets <https://example.com>", ["https://example.com"]),
+        ("Curly braces {https://example.com}", ["https://example.com"]),
     ])
     func extractURLs(input: String, expected: [String]) {
         let processor = LinkProcessor()
