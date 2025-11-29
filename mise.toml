@@ -2,3 +2,7 @@
 "go:github.com/idursun/jjui/cmd/jjui" = "latest"
 "go:github.com/steveyegge/beads/cmd/bd" = "latest"
 swiftformat = "latest"
+
+[tasks.flush]
+run = "bd sync --flush-only"
+description = "Flush beads database to sync with git"
