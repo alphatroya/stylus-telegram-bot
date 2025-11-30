@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "XcodeBuildMCP": {
+      "enabled": true,
+      "type": "local",
+      "command": ["npx", "-y", "xcodebuildmcp@latest"],
+      "environment": {
+        "INCREMENTAL_BUILDS_ENABLED": "true",
+      },
+    },
+  },
+}
