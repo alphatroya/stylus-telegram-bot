@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - JournalWriter
 
-struct JournalWriter {
+actor JournalWriter {
     // MARK: Properties
 
     let fileManager: FileWorker
