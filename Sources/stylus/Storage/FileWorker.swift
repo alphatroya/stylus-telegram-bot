@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - FileHandleProtocol
 
-protocol FileHandleProtocol {
+protocol FileHandleProtocol: Sendable {
     func seekToEndOfFile() -> UInt64
     func write(_ data: Data)
     func closeFile()
@@ -14,7 +14,7 @@ extension FileHandle: FileHandleProtocol {}
 
 // MARK: - FileWorker
 
-protocol FileWorker {
+protocol FileWorker: Sendable {
     func homeDirectoryPath() -> String
 
     func fileExists(at path: String) -> Bool
@@ -39,7 +39,7 @@ protocol FileWorker {
 
 // MARK: - SystemFileWorker
 
-final class SystemFileWorker: FileWorker {
+final class SystemFileWorker: FileWorker, @unchecked Sendable {
     // MARK: Properties
 
     let fileManager: FileManager

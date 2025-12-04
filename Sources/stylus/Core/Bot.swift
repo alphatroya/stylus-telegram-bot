@@ -16,7 +16,7 @@ struct Bot {
     func run() async throws {
         let bot = TelegramBot(token: config.telegramBotApiKey.unsafeValue)
         let journalsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("journals")
-        try journalWriter.ensureDirectoryExists(at: journalsURL.path)
+        try await journalWriter.ensureDirectoryExists(at: journalsURL.path)
 
         while let update = bot.nextUpdateSync() {
             guard let message = update.message, let from = message.from else {
@@ -44,7 +44,7 @@ struct Bot {
                 let taggedText = addStylusInboxTag(to: processedText)
                 let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
 
-                try journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
+                try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
 
                 print("Successfully added to journal: \(filePath)")
                 bot.sendMessageAsync(

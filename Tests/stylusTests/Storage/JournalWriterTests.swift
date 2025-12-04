@@ -2,174 +2,199 @@ import Foundation
 @testable import stylus
 import Testing
 
-// MARK: - JournalWriterTests
+// MARK: - MockFileHandle
 
-@Suite("JournalWriterTests")
-struct JournalWriterTests {
-    @Test func ensureDirectoryExistsCreatesDirectory() throws {
-        var createDirectoryCalled = false
-        let fileWorker = MockFileWorker(
-            fileExistsAtPath: { _ in false },
-            createDirectoryAtPath: { _, _, _ in
-                createDirectoryCalled = true
-            },
-        )
-        let writer = JournalWriter(fileManager: fileWorker)
+final class MockFileHandle: FileHandleProtocol, @unchecked Sendable {
+    // MARK: Properties
 
-        try writer.ensureDirectoryExists(at: "/test/path")
+    var data = Data()
+    var isClosed = false
 
-        #expect(createDirectoryCalled)
+    // MARK: Functions
+
+    func seekToEndOfFile() -> UInt64 {
+        UInt64(data.count)
     }
 
-    @Test func ensureDirectoryExistsDoesNotCreateIfExists() throws {
-        var createDirectoryCalled = false
-        let fileWorker = MockFileWorker(
-            fileExistsAtPath: { _ in true },
-            createDirectoryAtPath: { _, _, _ in
-                createDirectoryCalled = true
-            },
-        )
-        let writer = JournalWriter(fileManager: fileWorker)
-
-        try writer.ensureDirectoryExists(at: "/test/path")
-
-        #expect(!createDirectoryCalled)
+    func write(_ data: Data) {
+        self.data.append(data)
     }
 
-    @Test func appendToJournalFileCreatesNewFile() throws {
-        var writtenContent: String?
-        let fileWorker = MockFileWorker(
-            fileExistsAtPath: { _ in false },
-            writeStringToFile: { content, _, _, _ in
-                writtenContent = content
-            },
-        )
-        let writer = JournalWriter(fileManager: fileWorker)
-
-        try writer.appendToJournalFile(at: "/test/file.md", content: "Test content\n")
-
-        #expect(writtenContent == "Test content\n")
-    }
-
-    @Test func appendToJournalFileAppendsToExisting() throws {
-        var writtenData: Data?
-        let mockFileHandle = MockFileHandle { data in
-            writtenData = data
-        }
-        let fileWorker = MockFileWorker(
-            fileExistsAtPath: { _ in true },
-            contentsAtPath: { _ in "Existing content\n" },
-            fileHandleForWritingToPath: { _ in mockFileHandle },
-        )
-        let writer = JournalWriter(fileManager: fileWorker)
-
-        try writer.appendToJournalFile(at: "/test/file.md", content: "New content\n")
-
-        let data = try #require(writtenData)
-        let written = String(data: data, encoding: .utf8)
-        #expect(written == "New content\n")
-    }
-
-    @Test func appendToJournalFileAddsNewlineIfNeeded() throws {
-        var writtenData: Data?
-        let mockFileHandle = MockFileHandle { data in
-            writtenData = data
-        }
-        let fileWorker = MockFileWorker(
-            fileExistsAtPath: { _ in true },
-            contentsAtPath: { _ in "Existing content without newline" },
-            fileHandleForWritingToPath: { _ in mockFileHandle },
-        )
-        let writer = JournalWriter(fileManager: fileWorker)
-
-        try writer.appendToJournalFile(at: "/test/file.md", content: "New content\n")
-
-        let data = try #require(writtenData)
-        let written = String(data: data, encoding: .utf8)
-        #expect(written == "\nNew content\n")
+    func closeFile() {
+        isClosed = true
     }
 }
 
 // MARK: - MockFileWorker
 
-final class MockFileWorker: FileWorker {
+final class MockFileWorker: FileWorker, @unchecked Sendable {
     // MARK: Properties
 
-    private let _fileExistsAtPath: (String) -> Bool
-    private let _createDirectoryAtPath: ((String, Bool, [FileAttributeKey: Any]?) throws -> Void)?
-    private let _contentsAtPath: ((String) throws -> String?)?
-    private let _writeStringToFile: ((String, String, Bool, String.Encoding) throws -> Void)?
-    private let _fileHandleForWritingToPath: ((String) throws -> FileHandleProtocol)?
-
-    // MARK: Lifecycle
-
-    init(
-        fileExistsAtPath: @escaping (String) -> Bool = { _ in false },
-        createDirectoryAtPath: ((String, Bool, [FileAttributeKey: Any]?) throws -> Void)? = nil,
-        contentsAtPath: ((String) throws -> String?)? = nil,
-        writeStringToFile: ((String, String, Bool, String.Encoding) throws -> Void)? = nil,
-        fileHandleForWritingToPath: ((String) throws -> FileHandleProtocol)? = nil,
-    ) {
-        _fileExistsAtPath = fileExistsAtPath
-        _createDirectoryAtPath = createDirectoryAtPath
-        _contentsAtPath = contentsAtPath
-        _writeStringToFile = writeStringToFile
-        _fileHandleForWritingToPath = fileHandleForWritingToPath
-    }
+    var fileSystem: [String: String] = [:]
+    var directories: Set<String> = []
+    var createDirectoryCallCount = 0
+    var writeStringToFileCallCount = 0
+    var fileHandleForWritingCallCount = 0
+    let mockFileHandle = MockFileHandle()
 
     // MARK: Functions
 
-    // MARK: FileWorker
-
     func homeDirectoryPath() -> String {
-        "/home/mock"
+        "/mock/home"
     }
 
     func fileExists(at path: String) -> Bool {
-        _fileExistsAtPath(path)
+        fileSystem[path] != nil || directories.contains(path)
     }
 
-    func createDirectory(at path: String, createIntermediates: Bool, attributes: [FileAttributeKey: Any]?) throws {
-        try _createDirectoryAtPath?(path, createIntermediates, attributes)
+    func createDirectory(
+        at path: String,
+        createIntermediates _: Bool,
+        attributes _: [FileAttributeKey: Any]?,
+    ) throws {
+        createDirectoryCallCount += 1
+        directories.insert(path)
     }
 
     func contents(at path: String) throws -> String? {
-        try _contentsAtPath?(path)
+        fileSystem[path]
     }
 
-    func writeStringToFile(content: String, path: String, atomically: Bool, encoding: String.Encoding) throws {
-        try _writeStringToFile?(content, path, atomically, encoding)
+    func writeStringToFile(
+        content: String,
+        path: String,
+        atomically _: Bool,
+        encoding _: String.Encoding,
+    ) throws {
+        writeStringToFileCallCount += 1
+        fileSystem[path] = content
     }
 
-    func fileHandleForWriting(to path: String) throws -> FileHandleProtocol {
-        guard let handler = _fileHandleForWritingToPath else {
-            throw NSError(domain: "MockError", code: 1, userInfo: [NSLocalizedDescriptionKey: "No handler set"])
-        }
+    func fileHandleForWriting(to _: String) throws -> FileHandleProtocol {
+        fileHandleForWritingCallCount += 1
+        return mockFileHandle
+    }
 
-        return try handler(path)
+    func reset() {
+        fileSystem = [:]
+        directories = []
+        createDirectoryCallCount = 0
+        writeStringToFileCallCount = 0
+        fileHandleForWritingCallCount = 0
+        mockFileHandle.data = Data()
+        mockFileHandle.isClosed = false
     }
 }
 
-// MARK: - MockFileHandle
+// MARK: - JournalWriterTests
 
-final class MockFileHandle: FileHandleProtocol {
-    // MARK: Properties
+@Suite("JournalWriterTests")
+struct JournalWriterTests {
+    @Test func ensureDirectoryExistsCreatesDirectory() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/directory"
 
-    private let writeCallback: (Data) -> Void
+        try await journalWriter.ensureDirectoryExists(at: testPath)
 
-    // MARK: Lifecycle
-
-    init(writeCallback: @escaping (Data) -> Void) {
-        self.writeCallback = writeCallback
+        #expect(mockFileWorker.createDirectoryCallCount == 1)
+        #expect(mockFileWorker.directories.contains(testPath))
     }
 
-    // MARK: Functions
+    @Test func ensureDirectoryExistsDoesNotCreateIfExists() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/existing/directory"
 
-    func seekToEndOfFile() -> UInt64 { 0 }
+        // Simulate existing directory
+        mockFileWorker.directories.insert(testPath)
 
-    func write(_ data: Data) {
-        writeCallback(data)
+        try await journalWriter.ensureDirectoryExists(at: testPath)
+
+        #expect(mockFileWorker.createDirectoryCallCount == 0)
     }
 
-    func closeFile() {}
+    @Test func appendToJournalFileCreatesNewFile() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/journal.txt"
+        let content = "New journal entry"
+
+        try await journalWriter.appendToJournalFile(at: testPath, content: content)
+
+        #expect(mockFileWorker.writeStringToFileCallCount == 1)
+        #expect(mockFileWorker.fileSystem[testPath] == content)
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 0)
+    }
+
+    @Test func appendToJournalFileAppendsToExisting() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/journal.txt"
+        let existingContent = "Existing content\n"
+        let newContent = "New entry"
+
+        // Simulate existing file
+        mockFileWorker.fileSystem[testPath] = existingContent
+
+        try await journalWriter.appendToJournalFile(at: testPath, content: newContent)
+
+        #expect(mockFileWorker.writeStringToFileCallCount == 0)
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
+        #expect(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8) == newContent)
+        #expect(mockFileWorker.mockFileHandle.isClosed == true)
+    }
+
+    @Test func appendToJournalFileAddsNewlineIfNeeded() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/journal.txt"
+        let existingContent = "Content without newline"
+        let newContent = "New entry"
+
+        // Simulate existing file without trailing newline
+        mockFileWorker.fileSystem[testPath] = existingContent
+
+        try await journalWriter.appendToJournalFile(at: testPath, content: newContent)
+
+        #expect(mockFileWorker.writeStringToFileCallCount == 0)
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
+        #expect(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8) == "\n" + newContent)
+        #expect(mockFileWorker.mockFileHandle.isClosed == true)
+    }
+
+    @Test func appendToJournalFileDoesNotAddNewlineWhenNotNeeded() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/journal.txt"
+        let existingContent = "Content with newline\n"
+        let newContent = "New entry"
+
+        // Simulate existing file with trailing newline
+        mockFileWorker.fileSystem[testPath] = existingContent
+
+        try await journalWriter.appendToJournalFile(at: testPath, content: newContent)
+
+        #expect(mockFileWorker.writeStringToFileCallCount == 0)
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
+        #expect(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8) == newContent)
+        #expect(mockFileWorker.mockFileHandle.isClosed == true)
+    }
+
+    @Test func appendToJournalFileHandlesEmptyExistingFile() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/journal.txt"
+        let newContent = "First entry"
+
+        // Simulate empty existing file
+        mockFileWorker.fileSystem[testPath] = ""
+
+        try await journalWriter.appendToJournalFile(at: testPath, content: newContent)
+
+        #expect(mockFileWorker.writeStringToFileCallCount == 0)
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
+        #expect(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8) == newContent)
+        #expect(mockFileWorker.mockFileHandle.isClosed == true)
+    }
 }
