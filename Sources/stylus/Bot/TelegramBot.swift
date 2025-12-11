@@ -45,7 +45,11 @@ final class TelegramBot: Bot, @unchecked Sendable {
                             ),
                         )
                 }
-                continuation.finish()
+                if let error = self.bot.lastError {
+                    continuation.finish(throwing: error)
+                } else {
+                    continuation.finish()
+                }
             }
         }
     }
