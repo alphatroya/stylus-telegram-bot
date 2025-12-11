@@ -44,5 +44,9 @@ struct App {
                 }
             }
         }
+        // If we reach here, the bot.launch() stream has terminated.
+        // This could be a graceful shutdown or an unexpected termination.
+        // If you expect the bot to run indefinitely, treat this as an error.
+        fatalError("Bot stream terminated unexpectedly. The bot should run continuously unless explicitly stopped.")
     }
 }
