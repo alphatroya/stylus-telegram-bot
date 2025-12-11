@@ -1,5 +1,5 @@
 import Foundation
-import TelegramBotSDK
+@preconcurrency import TelegramBotSDK
 
 // MARK: - TelegramConfig
 
@@ -10,6 +10,12 @@ struct TelegramConfig {
 // MARK: - TelegramBot
 
 final class TelegramBot: Bot, @unchecked Sendable {
+    // MARK: Nested Types
+
+    struct Error: Swift.Error {
+        var dataTaskError: TelegramBotSDK.DataTaskError
+    }
+
     // MARK: Properties
 
     let bot: TelegramBotSDK.TelegramBot
@@ -22,7 +28,7 @@ final class TelegramBot: Bot, @unchecked Sendable {
 
     // MARK: Functions
 
-    func launch() -> AsyncThrowingStream<Message, Error> {
+    func launch() -> AsyncThrowingStream<Message, Swift.Error> {
         AsyncThrowingStream { continuation in
             DispatchQueue.global().async {
                 while let update = self.bot.nextUpdateSync() {
@@ -46,7 +52,7 @@ final class TelegramBot: Bot, @unchecked Sendable {
                         )
                 }
                 if let error = self.bot.lastError {
-                    continuation.finish(throwing: error)
+                    continuation.finish(throwing: Error(dataTaskError: error))
                 } else {
                     continuation.finish()
                 }
