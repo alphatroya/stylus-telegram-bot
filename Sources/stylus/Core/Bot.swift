@@ -37,10 +37,7 @@ struct Bot {
 
             do {
                 let timeString = await dateFormatter.formatDate("HH:mm", date: message.date)
-                // Process links first
-                let processedText = await linkProcessor.processLinks(
-                    in: text,
-                )
+                let processedText = await linkProcessor.processLinks(in: text)
                 let taggedText = addStylusInboxTag(to: processedText)
                 let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
 
@@ -49,7 +46,7 @@ struct Bot {
                 print("Successfully added to journal: \(filePath)")
                 bot.sendMessageAsync(
                     chatId: .chat(from.id),
-                    text: "✅ Entry saved to your journal",
+                    text: "✅ Saved!",
                     replyToMessageId: message.messageId,
                 )
             } catch {

@@ -15,8 +15,6 @@ extension FileHandle: FileHandleProtocol {}
 // MARK: - FileWorker
 
 protocol FileWorker: Sendable {
-    func homeDirectoryPath() -> String
-
     func fileExists(at path: String) -> Bool
 
     func createDirectory(
@@ -51,10 +49,6 @@ final class SystemFileWorker: FileWorker, @unchecked Sendable {
     }
 
     // MARK: Functions
-
-    func homeDirectoryPath() -> String {
-        ProcessInfo.processInfo.environment["HOME"] ?? FileManager.default.homeDirectoryForCurrentUser.path
-    }
 
     func fileExists(at path: String) -> Bool {
         fileManager.fileExists(atPath: path)

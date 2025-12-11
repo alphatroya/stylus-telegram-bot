@@ -34,6 +34,7 @@ struct LinkProcessor {
             return nil
         }
 
+        print("fetching metadata for \(url)")
         let metadata = try await provider.fetchMetadata(for: url)
         return (metadata.title, metadata.url)
     }
@@ -42,7 +43,9 @@ struct LinkProcessor {
     func processLinks(
         in text: String,
         metadataProvider: @escaping @Sendable () -> LinkMetadataProviderProtocol = {
-            LPMetadataProvider()
+            let provider = LPMetadataProvider()
+            provider.timeout = 5
+            return provider
         },
     ) async -> String {
         let urls = extractURLs(from: text)
