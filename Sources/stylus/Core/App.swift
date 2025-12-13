@@ -27,22 +27,51 @@ struct App {
             let messageDateFormatted = await dateFormatter.formatDate("yyyy_MM_dd", date: message.date)
             let filePath = journalsURL.appendingPathComponent("\(messageDateFormatted).md").path
 
+            let timeString = await dateFormatter.formatDate("HH:mm", date: message.date)
             switch message.messageType {
             case let .justText(text):
                 do {
-                    let timeString = await dateFormatter.formatDate("HH:mm", date: message.date)
                     let processedText = await linkProcessor.processLinks(in: text)
                     let taggedText = addStylusInboxTag(to: processedText)
                     let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
-
                     try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
-
-                    print("Successfully added to journal: \(filePath)")
-                    bot.respondAsSaved(on: message)
                 } catch {
-                    print("Error: \(error)")
+                    print("Error processing message: \(text), err: \(error)")
+                    continue
+                }
+
+            case let .image(fileId, caption):
+                do {
+                    // 1. Ensure assets directory exists
+                    let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
+                    try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
+
+                    // 2. Load the best quality image and save to assets folder
+                    let fileData = try await bot.loadFile(with: fileId)
+                    let fileName = "\(fileId).jpg" // Telegram images are usually JPEGs
+                    let assetFilePath = assetsURL.appendingPathComponent(fileName).path
+
+                    // Save image to assets folder
+                    try await journalWriter.saveImageFile(data: fileData, to: assetFilePath)
+
+                    // 3. Create markdown image reference
+                    let imageMarkdown = "![Image](../assets/\(fileName))"
+
+                    // 4. Combine caption with image reference
+                    let captionText = caption ?? ""
+                    let fullText = captionText.isEmpty ? imageMarkdown : "\(captionText)\n\n\(imageMarkdown)"
+
+                    let taggedText = addStylusInboxTag(to: fullText)
+                    let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
+                    try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
+                } catch {
+                    print("Error processing image err: \(error)")
+                    continue
                 }
             }
+
+            print("Successfully added to journal: \(filePath)")
+            bot.respondAsSaved(on: message)
         }
         // If we reach here, the bot.launch() stream has terminated.
         // This could be a graceful shutdown or an unexpected termination.

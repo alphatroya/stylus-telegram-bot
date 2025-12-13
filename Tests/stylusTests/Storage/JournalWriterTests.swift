@@ -75,6 +75,15 @@ final class MockFileWorker: FileWorker, @unchecked Sendable {
         return mockFileHandle
     }
 
+    func writeDataToFile(
+        data: Data,
+        path: String,
+    ) throws {
+        // For testing purposes, we can store the data as a string representation
+        // This allows us to verify the method was called correctly
+        fileSystem[path] = "DATA_\(data.count)_BYTES"
+    }
+
     func reset() {
         fileSystem = [:]
         directories = []
