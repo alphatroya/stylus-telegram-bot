@@ -32,5 +32,5 @@ protocol Bot {
 
     func launch() -> AsyncThrowingStream<Message, Error>
     func respondAsSaved(on: Message)
-    func loadFile(with: String) async throws -> File
+    func loadFile(with: String) async throws -> (data: File, filePath: String)
 }

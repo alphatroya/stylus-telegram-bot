@@ -84,7 +84,7 @@ final class TelegramBot: Bot, @unchecked Sendable {
     }
 
     @concurrent
-    func loadFile(with id: String) async throws -> Data {
+    func loadFile(with id: String) async throws -> (data: Data, filePath: String) {
         let filePath: String = try await withCheckedThrowingContinuation { continuation in
             bot.getFileAsync(fileId: id) { result, err in
                 if let err {
@@ -103,7 +103,7 @@ final class TelegramBot: Bot, @unchecked Sendable {
         }
 
         let (data, _) = try await URLSession.shared.data(from: url)
-        return data
+        return (data: data, filePath: filePath)
     }
 
     private func bestQualityPhotos(from photos: [PhotoSize]) -> String? {

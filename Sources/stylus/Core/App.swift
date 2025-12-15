@@ -46,18 +46,19 @@ struct App {
                     let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
                     try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
 
-                    // 2. Load the best quality image and save to assets folder
-                    let fileData = try await bot.loadFile(with: fileId)
-                    let fileName = "\(fileId).jpg" // Telegram images are usually JPEGs
+                    // 2. Download the file and get its path with extension
+                    let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
+                    let fileExtension = URL(fileURLWithPath: filePathInfo).pathExtension
+                    let fileName = fileExtension.isEmpty ? "\(fileId)" : "\(fileId).\(fileExtension)"
                     let assetFilePath = assetsURL.appendingPathComponent(fileName).path
 
-                    // Save image to assets folder
+                    // 3. Save image to assets folder
                     try await journalWriter.saveImageFile(data: fileData, to: assetFilePath)
 
-                    // 3. Create markdown image reference
+                    // 4. Create markdown image reference
                     let imageMarkdown = "![Image](../assets/\(fileName))"
 
-                    // 4. Combine caption with image reference
+                    // 5. Combine caption with image reference
                     let captionText = caption ?? ""
                     let fullText = captionText.isEmpty ? imageMarkdown : "\(captionText)\n\n\(imageMarkdown)"
 
