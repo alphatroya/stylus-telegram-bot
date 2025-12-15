@@ -84,9 +84,9 @@ final class TelegramBot: Bot, @unchecked Sendable {
     }
 
     @concurrent
-    func loadFile(with id: String) async throws -> Data {
+    func getFilePath(for fileId: String) async throws -> String {
         let filePath: String = try await withCheckedThrowingContinuation { continuation in
-            bot.getFileAsync(fileId: id) { result, err in
+            bot.getFileAsync(fileId: fileId) { result, err in
                 if let err {
                     continuation.resume(throwing: Error.dataTaskError(err))
                     return
@@ -98,6 +98,12 @@ final class TelegramBot: Bot, @unchecked Sendable {
                 continuation.resume(throwing: Error.unknownError)
             }
         }
+        return filePath
+    }
+
+    @concurrent
+    func loadFile(with id: String) async throws -> Data {
+        let filePath = try await getFilePath(for: id)
         guard let url = URL(string: "https://api.telegram.org/file/bot\(bot.token)/\(filePath)") else {
             throw Error.wrongFileURL
         }
