@@ -102,7 +102,8 @@ final class TelegramBot: Bot, @unchecked Sendable {
             throw Error.wrongFileURL
         }
 
-        return try Data(contentsOf: url)
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return data
     }
 
     private func bestQualityPhotos(from photos: [PhotoSize]) -> String? {
