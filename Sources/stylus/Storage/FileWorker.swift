@@ -33,6 +33,11 @@ protocol FileWorker: Sendable {
     ) throws
 
     func fileHandleForWriting(to path: String) throws -> FileHandleProtocol
+
+    func writeDataToFile(
+        data: Data,
+        path: String,
+    ) throws
 }
 
 // MARK: - SystemFileWorker
@@ -81,5 +86,12 @@ final class SystemFileWorker: FileWorker, @unchecked Sendable {
 
     func fileHandleForWriting(to path: String) throws -> FileHandleProtocol {
         try FileHandle(forWritingTo: URL(fileURLWithPath: path))
+    }
+
+    func writeDataToFile(
+        data: Data,
+        path: String,
+    ) throws {
+        try data.write(to: URL(fileURLWithPath: path))
     }
 }

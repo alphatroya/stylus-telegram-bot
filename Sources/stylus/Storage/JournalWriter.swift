@@ -50,4 +50,8 @@ actor JournalWriter {
                 )
         }
     }
+
+    func saveImageFile(data: Data, to filePath: String) throws {
+        try fileManager.writeDataToFile(data: data, path: filePath)
+    }
 }

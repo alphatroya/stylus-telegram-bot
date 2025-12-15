@@ -14,6 +14,7 @@ struct Message {
 
     enum MessageType {
         case justText(String)
+        case image(fileId: String, caption: String?)
     }
 
     // MARK: Properties
@@ -27,6 +28,9 @@ struct Message {
 // MARK: - Bot
 
 protocol Bot {
+    typealias File = Data
+
     func launch() -> AsyncThrowingStream<Message, Error>
     func respondAsSaved(on: Message)
+    func loadFile(with: String) async throws -> (data: File, filePath: String)
 }

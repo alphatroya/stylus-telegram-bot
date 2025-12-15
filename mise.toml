@@ -1,6 +1,3 @@
 [tools]
 swiftformat = "latest"
 
-[tasks.flush]
-run = "bd sync --flush-only"
-description = "Flush beads database to sync with git"
