@@ -26,12 +26,18 @@ final class TelegramBot: Bot, @unchecked Sendable {
 
     init(config: TelegramConfig) {
         bot = TelegramBotSDK.TelegramBot(token: config.token)
+        bot.logger = {
+            #if DEBUG
+                print($0)
+            #endif
+        }
     }
 
     // MARK: Functions
 
     func launch() -> AsyncThrowingStream<Message, Swift.Error> {
         AsyncThrowingStream { continuation in
+            // TODO: need to replace this GCD call by actor or more swift concurrency solution
             DispatchQueue.global().async {
                 while let update = self.bot.nextUpdateSync() {
                     guard let message = update.message, let from = message.from else {
