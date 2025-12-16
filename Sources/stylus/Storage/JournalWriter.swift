@@ -1,5 +1,20 @@
 import Foundation
 
+// MARK: - ImageFileError
+
+public enum ImageFileError: Error, LocalizedError, Equatable {
+    case fileAlreadyExists(String)
+
+    // MARK: Computed Properties
+
+    public var errorDescription: String? {
+        switch self {
+        case let .fileAlreadyExists(filePath):
+            "Image file already exists at path: \(filePath)"
+        }
+    }
+}
+
 // MARK: - JournalWriter
 
 actor JournalWriter {
@@ -52,6 +67,10 @@ actor JournalWriter {
     }
 
     func saveImageFile(data: Data, to filePath: String) throws {
+        guard !fileManager.fileExists(at: filePath) else {
+            throw ImageFileError.fileAlreadyExists(filePath)
+        }
+
         try fileManager.writeDataToFile(data: data, path: filePath)
     }
 }

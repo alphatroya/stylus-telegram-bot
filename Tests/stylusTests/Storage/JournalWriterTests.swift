@@ -206,4 +206,29 @@ struct JournalWriterTests {
         #expect(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8) == newContent)
         #expect(mockFileWorker.mockFileHandle.isClosed == true)
     }
+
+    @Test func saveImageFileSavesWhenFileDoesNotExist() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/image.jpg"
+        let testData = Data([0xFF, 0xD8, 0xFF]) // JPEG header bytes
+
+        try await journalWriter.saveImageFile(data: testData, to: testPath)
+
+        #expect(mockFileWorker.fileSystem[testPath] == "DATA_3_BYTES")
+    }
+
+    @Test func saveImageFileThrowsWhenFileExists() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/existing.jpg"
+        let testData = Data([0xFF, 0xD8, 0xFF])
+
+        // Simulate existing file
+        mockFileWorker.fileSystem[testPath] = "existing content"
+
+        await #expect(throws: ImageFileError.fileAlreadyExists(testPath)) {
+            try await journalWriter.saveImageFile(data: testData, to: testPath)
+        }
+    }
 }
