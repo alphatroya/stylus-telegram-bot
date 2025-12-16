@@ -60,10 +60,11 @@ struct App {
 
                     // 5. Build the entry with caption and collapsed section
                     let captionText = caption ?? ""
+                    let processedCaption = addStylusInboxTag(to: captionText)
                     let lineToAppend = if captionText.isEmpty {
-                        "- **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(imageMarkdown)\n"
+                        "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(imageMarkdown)\n"
                     } else {
-                        "- **\(timeString)** \(captionText) #stylus-inbox\ncollapsed:: true\n    - \(imageMarkdown)\n"
+                        "- TODO **\(timeString)** \(processedCaption)\ncollapsed:: true\n    - \(imageMarkdown)\n"
                     }
 
                     try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
