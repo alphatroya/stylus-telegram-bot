@@ -56,14 +56,16 @@ struct App {
                     try await journalWriter.saveImageFile(data: fileData, to: assetFilePath)
 
                     // 4. Create markdown image reference
-                    let imageMarkdown = "![Image](../assets/\(fileName))"
+                    let imageMarkdown = "![image](../assets/\(fileName))"
 
-                    // 5. Combine caption with image reference
+                    // 5. Build the entry with caption and collapsed section
                     let captionText = caption ?? ""
-                    let fullText = captionText.isEmpty ? imageMarkdown : "\(captionText)\n\n\(imageMarkdown)"
+                    let lineToAppend = if captionText.isEmpty {
+                        "- **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(imageMarkdown)\n"
+                    } else {
+                        "- **\(timeString)** \(captionText) #stylus-inbox\ncollapsed:: true\n    - \(imageMarkdown)\n"
+                    }
 
-                    let taggedText = addStylusInboxTag(to: fullText)
-                    let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
                     try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
                 } catch {
                     print("Error processing image err: \(error)")
