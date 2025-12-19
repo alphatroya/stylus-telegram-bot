@@ -19,23 +19,18 @@ struct App {
     }
 
     func handleImageMessage(fileId: String, caption: String?, timeString: String, filePath: String) async throws {
-        // 1. Ensure assets directory exists
         let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
         try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
 
-        // 2. Download the file and get its path with extension
         let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
         let fileExtension = URL(fileURLWithPath: filePathInfo).pathExtension
         let fileName = fileExtension.isEmpty ? "\(fileId)" : "\(fileId).\(fileExtension)"
         let assetFilePath = assetsURL.appendingPathComponent(fileName).path
 
-        // 3. Save image to assets folder
         try await journalWriter.saveImageFile(data: fileData, to: assetFilePath)
 
-        // 4. Create markdown image reference
         let imageMarkdown = "![image](../assets/\(fileName))"
 
-        // 5. Build the entry with caption and collapsed section
         let captionText = caption ?? ""
         let processedCaption = addStylusInboxTag(to: captionText)
         let lineToAppend = if captionText.isEmpty {
@@ -85,9 +80,6 @@ struct App {
             print("Successfully added to journal: \(filePath)")
             bot.respondAsSaved(on: message)
         }
-        // If we reach here, the bot.launch() stream has terminated.
-        // This could be a graceful shutdown or an unexpected termination.
-        // If you expect the bot to run indefinitely, treat this as an error.
         fatalError("Bot stream terminated unexpectedly. The bot should run continuously unless explicitly stopped.")
     }
 }
