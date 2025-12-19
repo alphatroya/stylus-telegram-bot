@@ -51,14 +51,12 @@ jobs:
     - name: Build
       run: swift build
 
-    # Run tests without coverage for fast feedback
-    # Coverage analysis runs separately in the coverage job below
     - name: Run tests
       run: swift test
 
   coverage:
     runs-on: macos-latest
-    needs: [swiftformat-check, swiftlint-check]
+    needs: [swiftformat-check, swiftlint-check, test]
     permissions:
       contents: read
 
