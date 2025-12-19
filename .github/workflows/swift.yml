@@ -59,6 +59,8 @@ jobs:
   coverage:
     runs-on: macos-latest
     needs: [swiftformat-check, swiftlint-check]
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v4
