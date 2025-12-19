@@ -161,6 +161,28 @@ Lint code with swiftlint:
 swiftlint lint
 ```
 
+### Code Coverage
+
+The project includes code coverage tracking in CI/CD:
+- Coverage runs as a separate check in GitHub Actions
+- Coverage reports are generated in LCOV format and uploaded to [Codecov](https://codecov.io)
+- Coverage analysis runs in parallel with the main test suite
+- The coverage check is independent and won't block the test job
+
+To view coverage locally:
+```bash
+# Run tests with coverage
+swift test --enable-code-coverage
+
+# Find the test binary (usually <PackageName>PackageTests.xctest)
+TEST_BINARY=$(find .build/debug -name "*.xctest" -type d | head -n 1)
+
+# Generate coverage report
+xcrun llvm-cov report \
+  "$TEST_BINARY/Contents/MacOS/$(basename $TEST_BINARY .xctest)" \
+  -instr-profile .build/debug/codecov/default.profdata
+```
+
 ### Code Style
 
 This project follows Swift best practices:
