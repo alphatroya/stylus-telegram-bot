@@ -141,6 +141,11 @@ Run tests:
 swift test
 ```
 
+Run tests with code coverage:
+```bash
+swift test --enable-code-coverage
+```
+
 Run a specific test:
 ```bash
 swift test --filter <test_name>
@@ -149,6 +154,25 @@ swift test --filter <test_name>
 Format code with swiftformat:
 ```bash
 swiftformat .
+```
+
+### Code Coverage
+
+The project includes code coverage tracking in CI/CD:
+- Tests are run with coverage enabled in GitHub Actions
+- Coverage reports are generated in LCOV format
+- Coverage summaries are displayed in the workflow logs
+- Coverage artifacts are available for download from the Actions tab
+
+To view coverage locally:
+```bash
+# Run tests with coverage
+swift test --enable-code-coverage
+
+# Generate coverage report
+xcrun llvm-cov report \
+  .build/debug/stylusPackageTests.xctest/Contents/MacOS/stylusPackageTests \
+  -instr-profile .build/debug/codecov/default.profdata
 ```
 
 ### Code Style
