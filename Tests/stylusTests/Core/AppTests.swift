@@ -9,35 +9,26 @@ struct AppTests {
     @Test func handleJustTextMessageProcessesTextCorrectly() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let mockLinkProcessor = MockLinkProcessor()
-        await mockLinkProcessor.setProcessLinksResult("Processed text with [link](https://example.com)")
-
         let config = makeTestConfig()
         let mockBot = MockBot()
 
-        // Create a custom LinkProcessor wrapper that uses our mock
-        let linkProcessor = LinkProcessor()
-        var app = App(
+        let app = App(
             config: config,
             journalWriter: journalWriter,
-            linkProcessor: linkProcessor,
+            linkProcessor: LinkProcessor(),
             dateFormatter: StylusDateFormatter(),
             bot: mockBot,
         )
 
         let testPath = "/test/journal.md"
         let timeString = "14:30"
-        let text = "Test message with https://example.com"
+        let text = "Test message without links"
 
-        // Since we can't directly inject MockLinkProcessor, we'll test with the real one
-        // but verify the output format is correct
         try await app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath)
 
         #expect(mockFileWorker.writeStringToFileCallCount == 1)
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent.contains("- TODO **14:30**"))
-        #expect(writtenContent.contains("#stylus-inbox"))
-        #expect(writtenContent.hasSuffix("\n"))
+        #expect(writtenContent == "- TODO **14:30** Test message without links #stylus-inbox\n")
     }
 
     @Test func handleJustTextMessageAddsInboxTag() async throws {
