@@ -11,14 +11,16 @@ struct App {
 
     // MARK: Functions
 
-    func handleJustTextMessage(text: String, timeString: String, filePath: String) async throws {
+    /// Internal for reuse and testing from the test target.
+    internal func handleJustTextMessage(text: String, timeString: String, filePath: String) async throws {
         let processedText = await linkProcessor.processLinks(in: text)
         let taggedText = addStylusInboxTag(to: processedText)
         let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
         try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
     }
 
-    func handleImageMessage(fileId: String, caption: String?, timeString: String, filePath: String) async throws {
+    /// Internal for reuse and testing from the test target.
+    internal func handleImageMessage(fileId: String, caption: String?, timeString: String, filePath: String) async throws {
         let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
         try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
 
