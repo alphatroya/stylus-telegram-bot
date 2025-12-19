@@ -45,6 +45,22 @@ final class TelegramBot: Bot, @unchecked Sendable {
                         continue
                     }
 
+                    if let document = message.document {
+                        continuation
+                            .yield(
+                                Message(
+                                    id: message.messageId,
+                                    from: .init(id: from.id, name: from.username),
+                                    date: message.date,
+                                    messageType: .document(
+                                        fileId: document.fileId,
+                                        fileName: document.fileName,
+                                        caption: message.caption,
+                                    ),
+                                ),
+                            )
+                    }
+
                     if let photo = message.photo, let bestQualityPhoto = self.bestQualityPhotos(from: photo) {
                         continuation
                             .yield(

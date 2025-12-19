@@ -45,6 +45,38 @@ struct App {
         try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
     }
 
+    /// Internal for reuse and testing from the test target.
+    func handleDocumentMessage(fileId: String, fileName: String?, caption: String?, timeString: String, filePath: String) async throws {
+        let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
+        try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
+
+        let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
+        let fileExtension = URL(fileURLWithPath: filePathInfo).pathExtension
+        let finalFileName = if let fileName, !fileName.isEmpty {
+            fileName
+        } else if !fileExtension.isEmpty {
+            "\(fileId).\(fileExtension)"
+        } else {
+            fileId
+        }
+        let assetFilePath = assetsURL.appendingPathComponent(finalFileName).path
+
+        try await journalWriter.saveImageFile(data: fileData, to: assetFilePath)
+
+        let documentMarkdown = "[📄 \(finalFileName)](../assets/\(finalFileName))"
+
+        let captionText = caption ?? ""
+        let processedCaptionText = await linkProcessor.processLinks(in: captionText)
+        let processedCaption = addStylusInboxTag(to: processedCaptionText)
+        let lineToAppend = if captionText.isEmpty {
+            "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(documentMarkdown)\n"
+        } else {
+            "- TODO **\(timeString)** \(processedCaption)\ncollapsed:: true\n    - \(documentMarkdown)\n"
+        }
+
+        try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
+    }
+
     func run() async throws {
         let journalsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("journals")
         try await journalWriter.ensureDirectoryExists(at: journalsURL.path)
@@ -76,6 +108,20 @@ struct App {
                     try await handleImageMessage(fileId: fileId, caption: caption, timeString: timeString, filePath: filePath)
                 } catch {
                     print("Error processing image err: \(error)")
+                    continue
+                }
+
+            case let .document(fileId, fileName, caption):
+                do {
+                    try await handleDocumentMessage(
+                        fileId: fileId,
+                        fileName: fileName,
+                        caption: caption,
+                        timeString: timeString,
+                        filePath: filePath,
+                    )
+                } catch {
+                    print("Error processing document err: \(error)")
                     continue
                 }
             }
