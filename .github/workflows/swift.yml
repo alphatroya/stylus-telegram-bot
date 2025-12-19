@@ -78,14 +78,24 @@ jobs:
 
     - name: Generate coverage report (LCOV format)
       run: |
-        # Find the test binary (usually named <PackageName>PackageTests.xctest)
-        TEST_BINARY=$(find .build/debug -name "*.xctest" -type d | head -n 1)
-        if [ -z "$TEST_BINARY" ]; then
-          echo "Error: Could not find test binary"
+        # Get the actual path to the test executable
+        # Swift PM stores the test executable in .build/debug with the package name
+        PACKAGE_NAME="stylus"
+        TEST_EXECUTABLE=".build/debug/${PACKAGE_NAME}PackageTests.xctest/Contents/MacOS/${PACKAGE_NAME}PackageTests"
+        
+        # Check if the test executable exists
+        if [ ! -f "$TEST_EXECUTABLE" ]; then
+          echo "Test executable not found at: $TEST_EXECUTABLE"
+          echo "Searching for test executables:"
+          find .build/debug -name "*PackageTests*" -o -name "*.xctest" 2>/dev/null || true
+          echo ""
+          echo "Contents of .build/debug:"
+          ls -la .build/debug/ || true
           exit 1
         fi
+        
         xcrun llvm-cov export -format="lcov" \
-          "$TEST_BINARY/Contents/MacOS/$(basename $TEST_BINARY .xctest)" \
+          "$TEST_EXECUTABLE" \
           -instr-profile .build/debug/codecov/default.profdata > coverage.lcov
 
     # Upload to Codecov for coverage tracking and visualization
