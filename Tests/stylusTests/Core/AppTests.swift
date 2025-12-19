@@ -2,39 +2,6 @@ import Foundation
 @testable import stylus
 import Testing
 
-// MARK: - MockMetadataProvider
-
-actor MockMetadataProvider: LinkMetadataProviderProtocol {
-    // MARK: Properties
-
-    private var mockTitles: [String: String] = [:]
-    private var shouldThrowError = false
-
-    // MARK: Functions
-
-    func setMockTitle(_ title: String, for urlString: String) {
-        mockTitles[urlString] = title
-    }
-
-    func setShouldThrowError(_ value: Bool) {
-        shouldThrowError = value
-    }
-
-    func fetchMetadata(for url: URL) async throws -> LinkMetadata {
-        if shouldThrowError {
-            throw URLError(.badServerResponse)
-        }
-
-        var metadata = LinkMetadata(url: url)
-        if let title = mockTitles[url.absoluteString] {
-            metadata.title = title
-        } else {
-            metadata.title = "Mock Page"
-        }
-        return metadata
-    }
-}
-
 // MARK: - AppTests
 
 @Suite("AppTests")
