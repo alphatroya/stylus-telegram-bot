@@ -6,17 +6,23 @@ import Testing
 
 @Suite("AppTests")
 struct AppTests {
+    // MARK: - Helpers
+
+    private func makeTestConfig() -> Config {
+        Config(
+            telegramBotApiKey: SecretString("test-key"),
+            telegramUserID: 123,
+            knowledgeBaseLocation: "/test/kb",
+        )
+    }
+
     @Test func handleJustTextMessageProcessesTextCorrectly() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
         let mockLinkProcessor = MockLinkProcessor()
         await mockLinkProcessor.setProcessLinksResult("Processed text with [link](https://example.com)")
 
-        let config = Config(
-            telegramBotApiKey: SecretString("test-key"),
-            telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb",
-        )
+        let config = makeTestConfig()
         let mockBot = MockBot()
 
         // Create a custom LinkProcessor wrapper that uses our mock
@@ -38,21 +44,16 @@ struct AppTests {
         try await app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath)
 
         #expect(mockFileWorker.writeStringToFileCallCount == 1)
-        let writtenContent = mockFileWorker.fileSystem[testPath]
-        #expect(writtenContent != nil)
-        #expect(try #require(writtenContent?.contains("- TODO **14:30**")))
-        #expect(try #require(writtenContent?.contains("#stylus-inbox")))
-        #expect(try #require(writtenContent?.hasSuffix("\n")))
+        let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
+        #expect(writtenContent.contains("- TODO **14:30**"))
+        #expect(writtenContent.contains("#stylus-inbox"))
+        #expect(writtenContent.hasSuffix("\n"))
     }
 
     @Test func handleJustTextMessageAddsInboxTag() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = Config(
-            telegramBotApiKey: SecretString("test-key"),
-            telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb",
-        )
+        let config = makeTestConfig()
         let mockBot = MockBot()
 
         let app = App(
@@ -76,11 +77,7 @@ struct AppTests {
     @Test func handleJustTextMessageAppendsToExistingFile() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = Config(
-            telegramBotApiKey: SecretString("test-key"),
-            telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb",
-        )
+        let config = makeTestConfig()
         let mockBot = MockBot()
 
         let app = App(
@@ -108,11 +105,7 @@ struct AppTests {
     @Test func handleImageMessageCreatesCorrectMarkdownWithoutCaption() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = Config(
-            telegramBotApiKey: SecretString("test-key"),
-            telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb",
-        )
+        let config = makeTestConfig()
         let mockBot = MockBot()
         let testImageData = Data([0xFF, 0xD8, 0xFF]) // JPEG header
         mockBot.loadFileResult = (data: testImageData, filePath: "file_123.jpg")
@@ -134,21 +127,14 @@ struct AppTests {
         #expect(mockFileWorker.createDirectoryCallCount == 1)
         #expect(mockFileWorker.directories.contains("/test/kb/assets"))
 
-        let writtenContent = mockFileWorker.fileSystem[testPath]
-        #expect(writtenContent != nil)
-        #expect(try #require(writtenContent?.contains("- TODO **14:30** #stylus-inbox")))
-        #expect(try #require(writtenContent?.contains("collapsed:: true")))
-        #expect(try #require(writtenContent?.contains("![image](../assets/file_123.jpg)")))
+        let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
+        #expect(writtenContent == "- TODO **14:30** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/file_123.jpg)\n")
     }
 
     @Test func handleImageMessageCreatesCorrectMarkdownWithCaption() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = Config(
-            telegramBotApiKey: SecretString("test-key"),
-            telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb",
-        )
+        let config = makeTestConfig()
         let mockBot = MockBot()
         let testImageData = Data([0x89, 0x50, 0x4E, 0x47]) // PNG header
         mockBot.loadFileResult = (data: testImageData, filePath: "photo_456.png")
@@ -169,21 +155,14 @@ struct AppTests {
 
         #expect(mockBot.loadFileCallCount == 1)
 
-        let writtenContent = mockFileWorker.fileSystem[testPath]
-        #expect(writtenContent != nil)
-        #expect(try #require(writtenContent?.contains("- TODO **15:45** Beautiful sunset #stylus-inbox")))
-        #expect(try #require(writtenContent?.contains("collapsed:: true")))
-        #expect(try #require(writtenContent?.contains("![image](../assets/photo_456.png)")))
+        let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
+        #expect(writtenContent == "- TODO **15:45** Beautiful sunset #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/photo_456.png)\n")
     }
 
     @Test func handleImageMessageHandlesFileWithoutExtension() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = Config(
-            telegramBotApiKey: SecretString("test-key"),
-            telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb",
-        )
+        let config = makeTestConfig()
         let mockBot = MockBot()
         let testImageData = Data([0x00, 0x01, 0x02])
         mockBot.loadFileResult = (data: testImageData, filePath: "file_789")
@@ -204,19 +183,14 @@ struct AppTests {
         let assetPath = "/test/kb/assets/file_789"
         #expect(mockFileWorker.fileSystem[assetPath] != nil)
 
-        let writtenContent = mockFileWorker.fileSystem[testPath]
-        #expect(writtenContent != nil)
-        #expect(try #require(writtenContent?.contains("![image](../assets/file_789)")))
+        let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
+        #expect(writtenContent == "- TODO **16:00** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/file_789)\n")
     }
 
     @Test func handleImageMessageSavesImageToAssetsFolder() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = Config(
-            telegramBotApiKey: SecretString("test-key"),
-            telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb",
-        )
+        let config = makeTestConfig()
         let mockBot = MockBot()
         let testImageData = Data([0xFF, 0xD8, 0xFF, 0xE0])
         mockBot.loadFileResult = (data: testImageData, filePath: "image_999.jpeg")
@@ -241,11 +215,7 @@ struct AppTests {
     @Test func handleImageMessageAddsInboxTagToEmptyCaption() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = Config(
-            telegramBotApiKey: SecretString("test-key"),
-            telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb",
-        )
+        let config = makeTestConfig()
         let mockBot = MockBot()
         let testImageData = Data([0x47, 0x49, 0x46]) // GIF header
         mockBot.loadFileResult = (data: testImageData, filePath: "animation.gif")
@@ -263,20 +233,14 @@ struct AppTests {
 
         try await app.handleImageMessage(fileId: "animation", caption: "", timeString: timeString, filePath: testPath)
 
-        let writtenContent = mockFileWorker.fileSystem[testPath]
-        #expect(writtenContent != nil)
-        // Empty caption should still have the tag directly after time
-        #expect(try #require(writtenContent?.contains("- TODO **18:00** #stylus-inbox")))
+        let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
+        #expect(writtenContent == "- TODO **18:00** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/animation.gif)\n")
     }
 
     @Test func handleImageMessageAppendsToExistingJournal() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = Config(
-            telegramBotApiKey: SecretString("test-key"),
-            telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb",
-        )
+        let config = makeTestConfig()
         let mockBot = MockBot()
         let testImageData = Data([0xFF, 0xD8])
         mockBot.loadFileResult = (data: testImageData, filePath: "photo.jpg")
@@ -298,9 +262,7 @@ struct AppTests {
         try await app.handleImageMessage(fileId: "photo", caption: "New photo", timeString: timeString, filePath: testPath)
 
         #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
-        let appendedContent = String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8)
-        #expect(appendedContent != nil)
-        #expect(try #require(appendedContent?.contains("- TODO **19:00** New photo #stylus-inbox")))
-        #expect(try #require(appendedContent?.contains("collapsed:: true")))
+        let appendedContent = try #require(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8))
+        #expect(appendedContent == "- TODO **19:00** New photo #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/photo.jpg)\n")
     }
 }
