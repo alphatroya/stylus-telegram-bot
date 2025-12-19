@@ -7,7 +7,7 @@ on:
     branches: [ "*" ]
 
 jobs:
-  quality-gate:
+  swiftformat-check:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,9 +23,22 @@ jobs:
     - name: Check formatting with swiftformat
       run: swiftformat --lint --strict .
 
+  swiftlint-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: GitHub Action for SwiftLint (Only files changed in the PR)
+      uses: norio-nomura/action-swiftlint@3.2.1
+      env:
+        DIFF_BASE: ${{ github.event_name == 'pull_request' && github.base_ref || 'HEAD~1' }}
+
   test:
     runs-on: macos-latest
-    needs: quality-gate
+    needs: [swiftformat-check, swiftlint-check]
 
     steps:
     - uses: actions/checkout@v4

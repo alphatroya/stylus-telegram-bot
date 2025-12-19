@@ -156,26 +156,9 @@ Format code with swiftformat:
 swiftformat .
 ```
 
-### Code Coverage
-
-The project includes code coverage tracking in CI/CD:
-- Tests are run with coverage enabled in GitHub Actions
-- Coverage reports are generated in LCOV format
-- Coverage summaries are displayed in the workflow logs
-- Coverage artifacts are available for download from the Actions tab
-
-To view coverage locally:
+Lint code with swiftlint:
 ```bash
-# Run tests with coverage
-swift test --enable-code-coverage
-
-# Find the test binary (usually <PackageName>PackageTests.xctest)
-TEST_BINARY=$(find .build/debug -name "*.xctest" -type d | head -n 1)
-
-# Generate coverage report
-xcrun llvm-cov report \
-  "$TEST_BINARY/Contents/MacOS/$(basename $TEST_BINARY .xctest)" \
-  -instr-profile .build/debug/codecov/default.profdata
+swiftlint lint
 ```
 
 ### Code Style
