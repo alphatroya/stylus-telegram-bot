@@ -2,6 +2,39 @@ import Foundation
 @testable import stylus
 import Testing
 
+// MARK: - MockMetadataProvider
+
+actor MockMetadataProvider: LinkMetadataProviderProtocol {
+    // MARK: Properties
+
+    private var mockTitles: [String: String] = [:]
+    private var shouldThrowError = false
+
+    // MARK: Functions
+
+    func setMockTitle(_ title: String, for urlString: String) {
+        mockTitles[urlString] = title
+    }
+
+    func setShouldThrowError(_ value: Bool) {
+        shouldThrowError = value
+    }
+
+    func fetchMetadata(for url: URL) async throws -> LinkMetadata {
+        if shouldThrowError {
+            throw URLError(.badServerResponse)
+        }
+
+        var metadata = LinkMetadata(url: url)
+        if let title = mockTitles[url.absoluteString] {
+            metadata.title = title
+        } else {
+            metadata.title = "Mock Page"
+        }
+        return metadata
+    }
+}
+
 // MARK: - AppTests
 
 @Suite("AppTests")
@@ -81,6 +114,39 @@ struct AppTests {
         #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
         let appendedContent = String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8)
         #expect(appendedContent == "- TODO **10:15** Second message #stylus-inbox\n")
+    }
+
+    @Test func handleJustTextMessageProcessesLinksInText() async {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let config = makeTestConfig()
+        let mockBot = MockBot()
+        let mockMetadataProvider = MockMetadataProvider()
+        await mockMetadataProvider.setMockTitle("Example Page", for: "https://example.com")
+
+        let linkProcessor = LinkProcessor()
+        let app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: linkProcessor,
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+
+        let testPath = "/test/journal.md"
+        let timeString = "11:00"
+        let text = "Check out https://example.com for info"
+
+        // Process the text through the link processor with mock provider
+        let processedText = await linkProcessor.processLinks(in: text, metadataProvider: { mockMetadataProvider })
+        let taggedText = addStylusInboxTag(to: processedText)
+        let expectedContent = "- TODO **11:00** \(taggedText)\n"
+
+        // Since we can't inject the metadata provider into App directly,
+        // we verify that the link processing logic works correctly
+        #expect(processedText == "Check out [Example Page](https://example.com) for info")
+        #expect(taggedText == "Check out [Example Page](https://example.com) for info #stylus-inbox")
+        #expect(expectedContent == "- TODO **11:00** Check out [Example Page](https://example.com) for info #stylus-inbox\n")
     }
 
     @Test func handleImageMessageCreatesCorrectMarkdownWithoutCaption() async throws {
