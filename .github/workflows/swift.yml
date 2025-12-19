@@ -53,3 +53,56 @@ jobs:
 
     - name: Run tests
       run: swift test
+
+  coverage:
+    runs-on: macos-latest
+    needs: [swiftformat-check, swiftlint-check, test]
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: 'latest-stable'
+
+    - name: Build
+      run: swift build
+
+    - name: Run tests with coverage
+      run: swift test --enable-code-coverage
+
+    - name: Generate coverage report (LCOV format)
+      run: |
+        # Get the actual path to the test executable
+        # Swift PM stores the test executable in .build/debug with the package name
+        PACKAGE_NAME="stylus"
+        TEST_EXECUTABLE=".build/debug/${PACKAGE_NAME}PackageTests.xctest/Contents/MacOS/${PACKAGE_NAME}PackageTests"
+        
+        # Check if the test executable exists
+        if [ ! -f "$TEST_EXECUTABLE" ]; then
+          echo "Test executable not found at: $TEST_EXECUTABLE"
+          echo "Searching for test executables:"
+          find .build/debug -name "*PackageTests*" -o -name "*.xctest" 2>/dev/null || true
+          echo ""
+          echo "Contents of .build/debug:"
+          ls -la .build/debug/ || true
+          exit 1
+        fi
+        
+        xcrun llvm-cov export -format="lcov" \
+          "$TEST_EXECUTABLE" \
+          -instr-profile .build/debug/codecov/default.profdata > coverage.lcov
+
+    # Upload to Codecov for coverage tracking and visualization
+    # fail_ci_if_error is false to prevent blocking if Codecov is temporarily unavailable
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.lcov
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
