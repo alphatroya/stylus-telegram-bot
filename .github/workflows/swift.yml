@@ -38,5 +38,24 @@ jobs:
     - name: Build
       run: swift build
 
-    - name: Run tests
-      run: swift test
+    - name: Run tests with coverage
+      run: swift test --enable-code-coverage
+
+    - name: Generate coverage report (LCOV format)
+      run: |
+        xcrun llvm-cov export -format="lcov" \
+          .build/debug/stylusPackageTests.xctest/Contents/MacOS/stylusPackageTests \
+          -instr-profile .build/debug/codecov/default.profdata > coverage.lcov
+
+    - name: Display coverage summary
+      run: |
+        xcrun llvm-cov report \
+          .build/debug/stylusPackageTests.xctest/Contents/MacOS/stylusPackageTests \
+          -instr-profile .build/debug/codecov/default.profdata
+
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage.lcov
+        retention-days: 30
