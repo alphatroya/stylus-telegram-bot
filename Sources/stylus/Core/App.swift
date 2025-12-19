@@ -34,7 +34,8 @@ struct App {
         let imageMarkdown = "![image](../assets/\(fileName))"
 
         let captionText = caption ?? ""
-        let processedCaption = addStylusInboxTag(to: captionText)
+        let processedCaptionText = await linkProcessor.processLinks(in: captionText)
+        let processedCaption = addStylusInboxTag(to: processedCaptionText)
         let lineToAppend = if captionText.isEmpty {
             "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(imageMarkdown)\n"
         } else {
