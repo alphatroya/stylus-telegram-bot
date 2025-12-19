@@ -6,16 +6,6 @@ import Testing
 
 @Suite("AppTests")
 struct AppTests {
-    // MARK: - Helpers
-
-    private func makeTestConfig() -> Config {
-        Config(
-            telegramBotApiKey: SecretString("test-key"),
-            telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb",
-        )
-    }
-
     @Test func handleJustTextMessageProcessesTextCorrectly() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
@@ -156,7 +146,8 @@ struct AppTests {
         #expect(mockBot.loadFileCallCount == 1)
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent == "- TODO **15:45** Beautiful sunset #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/photo_456.png)\n")
+        #expect(writtenContent ==
+            "- TODO **15:45** Beautiful sunset #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/photo_456.png)\n")
     }
 
     @Test func handleImageMessageHandlesFileWithoutExtension() async throws {
@@ -264,5 +255,15 @@ struct AppTests {
         #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
         let appendedContent = try #require(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8))
         #expect(appendedContent == "- TODO **19:00** New photo #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/photo.jpg)\n")
+    }
+
+    // MARK: - Helpers
+
+    private func makeTestConfig() -> Config {
+        Config(
+            telegramBotApiKey: SecretString("test-key"),
+            telegramUserID: 123,
+            knowledgeBaseLocation: "/test/kb",
+        )
     }
 }

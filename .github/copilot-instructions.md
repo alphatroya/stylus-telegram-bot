@@ -67,6 +67,7 @@ Tests/stylusTests/
 
 - Use Swift 6.2 with modern concurrency (target: macOS 15+)
 - Format with swiftformat (mise-managed, max width 140 chars)
+- **ALWAYS run swiftformat before committing code changes** - Use `swiftformat .` command
 - Use Swift Testing framework (#expect, @Test, @Suite with descriptive names)
 - Prefer guard statements over nested ifs for early returns
 - Use `// MARK: - ClassName` comments for type organization
@@ -94,9 +95,17 @@ Tests/stylusTests/
 
 - ✅ Write tests for all new features
 - ✅ Run `swift test` before committing
-- ✅ Format code with `swiftformat .` before committing
+- ✅ **ALWAYS run `swiftformat .` before committing to ensure code formatting consistency**
 - ✅ Use protocol-based design for testability
 - ✅ Follow Swift 6.2 concurrency patterns (async/await)
 - ❌ Do NOT use force unwrapping (!) in production code
 - ❌ Do NOT use completion handlers, use async/await instead
 - ❌ Do NOT use try! in production code, handle errors properly
+
+## Workflow for Code Changes
+
+1. Make your code changes
+2. Run `swiftformat .` to format all Swift files according to project rules
+3. Run `swift test` to ensure all tests pass
+4. Commit your changes
+5. The formatting step ensures consistency and prevents formatting-only commits later
