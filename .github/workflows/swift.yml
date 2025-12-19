@@ -43,14 +43,26 @@ jobs:
 
     - name: Generate coverage report (LCOV format)
       run: |
+        # Find the test binary (usually named <PackageName>PackageTests.xctest)
+        TEST_BINARY=$(find .build/debug -name "*.xctest" -type d | head -n 1)
+        if [ -z "$TEST_BINARY" ]; then
+          echo "Error: Could not find test binary"
+          exit 1
+        fi
         xcrun llvm-cov export -format="lcov" \
-          .build/debug/stylusPackageTests.xctest/Contents/MacOS/stylusPackageTests \
+          "$TEST_BINARY/Contents/MacOS/$(basename $TEST_BINARY .xctest)" \
           -instr-profile .build/debug/codecov/default.profdata > coverage.lcov
 
     - name: Display coverage summary
       run: |
+        # Find the test binary
+        TEST_BINARY=$(find .build/debug -name "*.xctest" -type d | head -n 1)
+        if [ -z "$TEST_BINARY" ]; then
+          echo "Error: Could not find test binary"
+          exit 1
+        fi
         xcrun llvm-cov report \
-          .build/debug/stylusPackageTests.xctest/Contents/MacOS/stylusPackageTests \
+          "$TEST_BINARY/Contents/MacOS/$(basename $TEST_BINARY .xctest)" \
           -instr-profile .build/debug/codecov/default.profdata
 
     - name: Upload coverage artifact

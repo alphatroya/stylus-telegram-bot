@@ -169,9 +169,12 @@ To view coverage locally:
 # Run tests with coverage
 swift test --enable-code-coverage
 
+# Find the test binary (usually <PackageName>PackageTests.xctest)
+TEST_BINARY=$(find .build/debug -name "*.xctest" -type d | head -n 1)
+
 # Generate coverage report
 xcrun llvm-cov report \
-  .build/debug/stylusPackageTests.xctest/Contents/MacOS/stylusPackageTests \
+  "$TEST_BINARY/Contents/MacOS/$(basename $TEST_BINARY .xctest)" \
   -instr-profile .build/debug/codecov/default.profdata
 ```
 
