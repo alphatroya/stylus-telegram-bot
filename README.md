@@ -151,6 +151,11 @@ Format code with swiftformat:
 swiftformat .
 ```
 
+Lint code with swiftlint:
+```bash
+swiftlint lint
+```
+
 ### Code Style
 
 This project follows Swift best practices:
