@@ -28,16 +28,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-
-    - name: Set up mise
-      uses: jdx/mise-action@v2
       with:
-          install: true
-          cache: true
-          experimental: true
+        fetch-depth: 0
 
-    - name: Lint with swiftlint
-      run: swiftlint lint --strict
+    - name: GitHub Action for SwiftLint (Only files changed in the PR)
+      uses: norio-nomura/action-swiftlint@3.2.1
+      env:
+        DIFF_BASE: ${{ github.base_ref }}
 
   test:
     runs-on: macos-latest
