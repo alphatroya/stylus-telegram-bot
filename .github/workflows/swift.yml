@@ -7,7 +7,7 @@ on:
     branches: [ "*" ]
 
 jobs:
-  quality-gate:
+  swiftformat-check:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,12 +23,25 @@ jobs:
     - name: Check formatting with swiftformat
       run: swiftformat --lint --strict .
 
+  swiftlint-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up mise
+      uses: jdx/mise-action@v2
+      with:
+          install: true
+          cache: true
+          experimental: true
+
     - name: Lint with swiftlint
       run: swiftlint lint --strict
 
   test:
     runs-on: macos-latest
-    needs: quality-gate
+    needs: [swiftformat-check, swiftlint-check]
 
     steps:
     - uses: actions/checkout@v4
