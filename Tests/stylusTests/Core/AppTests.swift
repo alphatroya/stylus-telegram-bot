@@ -116,7 +116,7 @@ struct AppTests {
         #expect(appendedContent == "- TODO **10:15** Second message #stylus-inbox\n")
     }
 
-    @Test func handleJustTextMessageProcessesLinksInText() async throws {
+    @Test func handleJustTextMessageProcessesLinksInText() async {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
         let config = makeTestConfig()
