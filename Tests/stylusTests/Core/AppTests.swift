@@ -125,6 +125,7 @@ final class MockBot: Bot, @unchecked Sendable {
         guard let result = loadFileResult else {
             throw URLError(.badURL)
         }
+
         return result
     }
 
@@ -167,7 +168,7 @@ struct AppTests {
         let config = Config(
             telegramBotApiKey: SecretString("test-key"),
             telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb"
+            knowledgeBaseLocation: "/test/kb",
         )
         let mockBot = MockBot()
 
@@ -178,7 +179,7 @@ struct AppTests {
             journalWriter: journalWriter,
             linkProcessor: linkProcessor,
             dateFormatter: StylusDateFormatter(),
-            bot: mockBot
+            bot: mockBot,
         )
 
         let testPath = "/test/journal.md"
@@ -192,9 +193,9 @@ struct AppTests {
         #expect(mockFileWorker.writeStringToFileCallCount == 1)
         let writtenContent = mockFileWorker.fileSystem[testPath]
         #expect(writtenContent != nil)
-        #expect(writtenContent!.contains("- TODO **14:30**"))
-        #expect(writtenContent!.contains("#stylus-inbox"))
-        #expect(writtenContent!.hasSuffix("\n"))
+        #expect(try #require(writtenContent?.contains("- TODO **14:30**")))
+        #expect(try #require(writtenContent?.contains("#stylus-inbox")))
+        #expect(try #require(writtenContent?.hasSuffix("\n")))
     }
 
     @Test func handleJustTextMessageAddsInboxTag() async throws {
@@ -203,7 +204,7 @@ struct AppTests {
         let config = Config(
             telegramBotApiKey: SecretString("test-key"),
             telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb"
+            knowledgeBaseLocation: "/test/kb",
         )
         let mockBot = MockBot()
 
@@ -212,7 +213,7 @@ struct AppTests {
             journalWriter: journalWriter,
             linkProcessor: LinkProcessor(),
             dateFormatter: StylusDateFormatter(),
-            bot: mockBot
+            bot: mockBot,
         )
 
         let testPath = "/test/journal.md"
@@ -231,7 +232,7 @@ struct AppTests {
         let config = Config(
             telegramBotApiKey: SecretString("test-key"),
             telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb"
+            knowledgeBaseLocation: "/test/kb",
         )
         let mockBot = MockBot()
 
@@ -240,7 +241,7 @@ struct AppTests {
             journalWriter: journalWriter,
             linkProcessor: LinkProcessor(),
             dateFormatter: StylusDateFormatter(),
-            bot: mockBot
+            bot: mockBot,
         )
 
         let testPath = "/test/journal.md"
@@ -263,7 +264,7 @@ struct AppTests {
         let config = Config(
             telegramBotApiKey: SecretString("test-key"),
             telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb"
+            knowledgeBaseLocation: "/test/kb",
         )
         let mockBot = MockBot()
         let testImageData = Data([0xFF, 0xD8, 0xFF]) // JPEG header
@@ -274,7 +275,7 @@ struct AppTests {
             journalWriter: journalWriter,
             linkProcessor: LinkProcessor(),
             dateFormatter: StylusDateFormatter(),
-            bot: mockBot
+            bot: mockBot,
         )
 
         let testPath = "/test/kb/journals/2025_01_01.md"
@@ -288,9 +289,9 @@ struct AppTests {
 
         let writtenContent = mockFileWorker.fileSystem[testPath]
         #expect(writtenContent != nil)
-        #expect(writtenContent!.contains("- TODO **14:30** #stylus-inbox"))
-        #expect(writtenContent!.contains("collapsed:: true"))
-        #expect(writtenContent!.contains("![image](../assets/file_123.jpg)"))
+        #expect(try #require(writtenContent?.contains("- TODO **14:30** #stylus-inbox")))
+        #expect(try #require(writtenContent?.contains("collapsed:: true")))
+        #expect(try #require(writtenContent?.contains("![image](../assets/file_123.jpg)")))
     }
 
     @Test func handleImageMessageCreatesCorrectMarkdownWithCaption() async throws {
@@ -299,7 +300,7 @@ struct AppTests {
         let config = Config(
             telegramBotApiKey: SecretString("test-key"),
             telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb"
+            knowledgeBaseLocation: "/test/kb",
         )
         let mockBot = MockBot()
         let testImageData = Data([0x89, 0x50, 0x4E, 0x47]) // PNG header
@@ -310,7 +311,7 @@ struct AppTests {
             journalWriter: journalWriter,
             linkProcessor: LinkProcessor(),
             dateFormatter: StylusDateFormatter(),
-            bot: mockBot
+            bot: mockBot,
         )
 
         let testPath = "/test/kb/journals/2025_01_01.md"
@@ -323,9 +324,9 @@ struct AppTests {
 
         let writtenContent = mockFileWorker.fileSystem[testPath]
         #expect(writtenContent != nil)
-        #expect(writtenContent!.contains("- TODO **15:45** Beautiful sunset #stylus-inbox"))
-        #expect(writtenContent!.contains("collapsed:: true"))
-        #expect(writtenContent!.contains("![image](../assets/photo_456.png)"))
+        #expect(try #require(writtenContent?.contains("- TODO **15:45** Beautiful sunset #stylus-inbox")))
+        #expect(try #require(writtenContent?.contains("collapsed:: true")))
+        #expect(try #require(writtenContent?.contains("![image](../assets/photo_456.png)")))
     }
 
     @Test func handleImageMessageHandlesFileWithoutExtension() async throws {
@@ -334,7 +335,7 @@ struct AppTests {
         let config = Config(
             telegramBotApiKey: SecretString("test-key"),
             telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb"
+            knowledgeBaseLocation: "/test/kb",
         )
         let mockBot = MockBot()
         let testImageData = Data([0x00, 0x01, 0x02])
@@ -345,7 +346,7 @@ struct AppTests {
             journalWriter: journalWriter,
             linkProcessor: LinkProcessor(),
             dateFormatter: StylusDateFormatter(),
-            bot: mockBot
+            bot: mockBot,
         )
 
         let testPath = "/test/kb/journals/2025_01_01.md"
@@ -358,7 +359,7 @@ struct AppTests {
 
         let writtenContent = mockFileWorker.fileSystem[testPath]
         #expect(writtenContent != nil)
-        #expect(writtenContent!.contains("![image](../assets/file_789)"))
+        #expect(try #require(writtenContent?.contains("![image](../assets/file_789)")))
     }
 
     @Test func handleImageMessageSavesImageToAssetsFolder() async throws {
@@ -367,7 +368,7 @@ struct AppTests {
         let config = Config(
             telegramBotApiKey: SecretString("test-key"),
             telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb"
+            knowledgeBaseLocation: "/test/kb",
         )
         let mockBot = MockBot()
         let testImageData = Data([0xFF, 0xD8, 0xFF, 0xE0])
@@ -378,7 +379,7 @@ struct AppTests {
             journalWriter: journalWriter,
             linkProcessor: LinkProcessor(),
             dateFormatter: StylusDateFormatter(),
-            bot: mockBot
+            bot: mockBot,
         )
 
         let testPath = "/test/kb/journals/2025_01_01.md"
@@ -396,7 +397,7 @@ struct AppTests {
         let config = Config(
             telegramBotApiKey: SecretString("test-key"),
             telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb"
+            knowledgeBaseLocation: "/test/kb",
         )
         let mockBot = MockBot()
         let testImageData = Data([0x47, 0x49, 0x46]) // GIF header
@@ -407,7 +408,7 @@ struct AppTests {
             journalWriter: journalWriter,
             linkProcessor: LinkProcessor(),
             dateFormatter: StylusDateFormatter(),
-            bot: mockBot
+            bot: mockBot,
         )
 
         let testPath = "/test/kb/journals/2025_01_01.md"
@@ -418,7 +419,7 @@ struct AppTests {
         let writtenContent = mockFileWorker.fileSystem[testPath]
         #expect(writtenContent != nil)
         // Empty caption should still have the tag directly after time
-        #expect(writtenContent!.contains("- TODO **18:00** #stylus-inbox"))
+        #expect(try #require(writtenContent?.contains("- TODO **18:00** #stylus-inbox")))
     }
 
     @Test func handleImageMessageAppendsToExistingJournal() async throws {
@@ -427,7 +428,7 @@ struct AppTests {
         let config = Config(
             telegramBotApiKey: SecretString("test-key"),
             telegramUserID: 123,
-            knowledgeBaseLocation: "/test/kb"
+            knowledgeBaseLocation: "/test/kb",
         )
         let mockBot = MockBot()
         let testImageData = Data([0xFF, 0xD8])
@@ -438,7 +439,7 @@ struct AppTests {
             journalWriter: journalWriter,
             linkProcessor: LinkProcessor(),
             dateFormatter: StylusDateFormatter(),
-            bot: mockBot
+            bot: mockBot,
         )
 
         let testPath = "/test/kb/journals/2025_01_01.md"
@@ -452,7 +453,7 @@ struct AppTests {
         #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
         let appendedContent = String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8)
         #expect(appendedContent != nil)
-        #expect(appendedContent!.contains("- TODO **19:00** New photo #stylus-inbox"))
-        #expect(appendedContent!.contains("collapsed:: true"))
+        #expect(try #require(appendedContent?.contains("- TODO **19:00** New photo #stylus-inbox")))
+        #expect(try #require(appendedContent?.contains("collapsed:: true")))
     }
 }
