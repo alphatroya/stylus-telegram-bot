@@ -177,10 +177,15 @@ swift test --enable-code-coverage
 # Find the test binary (usually <PackageName>PackageTests.xctest)
 TEST_BINARY=$(find .build/debug -name "*.xctest" -type d | head -n 1)
 
-# Generate coverage report
+# View coverage summary (text format)
 xcrun llvm-cov report \
   "$TEST_BINARY/Contents/MacOS/$(basename $TEST_BINARY .xctest)" \
   -instr-profile .build/debug/codecov/default.profdata
+
+# Or export coverage in LCOV format (used by CI)
+xcrun llvm-cov export -format="lcov" \
+  "$TEST_BINARY/Contents/MacOS/$(basename $TEST_BINARY .xctest)" \
+  -instr-profile .build/debug/codecov/default.profdata > coverage.lcov
 ```
 
 ### Code Style
