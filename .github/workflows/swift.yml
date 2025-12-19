@@ -51,6 +51,8 @@ jobs:
     - name: Build
       run: swift build
 
+    # Run tests without coverage for fast feedback
+    # Coverage analysis runs separately in the coverage job below
     - name: Run tests
       run: swift test
 
@@ -84,6 +86,8 @@ jobs:
           "$TEST_BINARY/Contents/MacOS/$(basename $TEST_BINARY .xctest)" \
           -instr-profile .build/debug/codecov/default.profdata > coverage.lcov
 
+    # Upload to Codecov for coverage tracking and visualization
+    # fail_ci_if_error is false to prevent blocking if Codecov is temporarily unavailable
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
