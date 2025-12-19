@@ -27,8 +27,11 @@
 
 ```
 Sources/stylus/
+├── Bot/
+│   ├── Bot.swift              # Bot protocol definition
+│   └── TelegramBot.swift      # Telegram bot implementation
 ├── Core/
-│   └── Bot.swift              # Main bot logic and message handling
+│   └── App.swift              # Application entry point
 ├── Message/
 │   ├── DateFormatter.swift    # Date formatting utilities
 │   ├── LinkProcessor.swift    # URL extraction and metadata fetching
@@ -39,7 +42,7 @@ Sources/stylus/
 ├── Config/
 │   ├── ConfigReader.swift     # Configuration parsing
 │   └── ConfigPath.swift       # Configuration file path resolution
-└── Stylus.swift               # Application entry point
+└── Stylus.swift               # Main executable entry point
 
 Tests/stylusTests/
 ├── Config/
