@@ -1,6 +1,30 @@
 import Foundation
 
+// MARK: - FileNameGenerationError
+
+enum FileNameGenerationError: Error, LocalizedError {
+    case maxRetriesExceeded(fileName: String, attempts: Int)
+
+    // MARK: Computed Properties
+
+    var errorDescription: String? {
+        switch self {
+        case let .maxRetriesExceeded(fileName, attempts):
+            "Failed to generate unique filename for '\(fileName)' after \(attempts) attempts"
+        }
+    }
+}
+
+// MARK: - App
+
 struct App {
+    // MARK: Static Properties
+
+    // MARK: Constants
+
+    private static let uuidSuffixLength = 8
+    private static let maxFileNameRetries = 100
+
     // MARK: Properties
 
     var config: Config
@@ -26,10 +50,12 @@ struct App {
 
         let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
         let fileExtension = URL(fileURLWithPath: filePathInfo).pathExtension
-        let fileName = fileExtension.isEmpty ? "\(fileId)" : "\(fileId).\(fileExtension)"
-        let assetFilePath = assetsURL.appendingPathComponent(fileName).path
-
-        try await journalWriter.saveImageFile(data: fileData, to: assetFilePath)
+        let baseFileName = fileExtension.isEmpty ? "\(fileId)" : "\(fileId).\(fileExtension)"
+        let fileName = try await saveFileWithUniqueFilename(
+            data: fileData,
+            baseFileName: baseFileName,
+            assetsURL: assetsURL,
+        )
 
         let imageMarkdown = "![image](../assets/\(fileName))"
 
@@ -46,22 +72,58 @@ struct App {
     }
 
     /// Internal for reuse and testing from the test target.
+    func saveFileWithUniqueFilename(data: Data, baseFileName: String, assetsURL: URL) async throws -> String {
+        var fileName = baseFileName
+        var assetFilePath = assetsURL.appendingPathComponent(fileName).path
+        var retryCount = 0
+
+        while retryCount < Self.maxFileNameRetries {
+            do {
+                try await journalWriter.saveImageFile(data: data, to: assetFilePath)
+                return fileName
+            } catch let error as ImageFileError where error == .fileAlreadyExists(assetFilePath) {
+                // Generate a unique filename by appending a random string
+                let randomSuffix = UUID().uuidString.prefix(Self.uuidSuffixLength)
+                let fileURL = URL(fileURLWithPath: baseFileName)
+                let nameWithoutExtension = fileURL.deletingPathExtension().lastPathComponent
+                let fileExtension = fileURL.pathExtension
+
+                fileName = if fileExtension.isEmpty {
+                    "\(nameWithoutExtension)_\(randomSuffix)"
+                } else {
+                    "\(nameWithoutExtension)_\(randomSuffix).\(fileExtension)"
+                }
+
+                assetFilePath = assetsURL.appendingPathComponent(fileName).path
+                retryCount += 1
+            } catch {
+                // Re-throw any other errors
+                throw error
+            }
+        }
+
+        throw FileNameGenerationError.maxRetriesExceeded(fileName: baseFileName, attempts: Self.maxFileNameRetries)
+    }
+
+    /// Internal for reuse and testing from the test target.
     func handleDocumentMessage(fileId: String, fileName: String?, caption: String?, timeString: String, filePath: String) async throws {
         let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
         try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
 
         let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
         let fileExtension = URL(fileURLWithPath: filePathInfo).pathExtension
-        let finalFileName = if let fileName, !fileName.isEmpty {
+        let baseFileName = if let fileName, !fileName.isEmpty {
             fileName
         } else if !fileExtension.isEmpty {
             "\(fileId).\(fileExtension)"
         } else {
             fileId
         }
-        let assetFilePath = assetsURL.appendingPathComponent(finalFileName).path
-
-        try await journalWriter.saveImageFile(data: fileData, to: assetFilePath)
+        let finalFileName = try await saveFileWithUniqueFilename(
+            data: fileData,
+            baseFileName: baseFileName,
+            assetsURL: assetsURL,
+        )
 
         let documentMarkdown = "[📄 \(finalFileName)](../assets/\(finalFileName))"
 

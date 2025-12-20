@@ -457,6 +457,130 @@ struct AppTests {
             "- TODO **19:00** Monthly invoice #stylus-inbox\ncollapsed:: true\n    - [📄 invoice.pdf](../assets/invoice.pdf)\n")
     }
 
+    @Test func handleDocumentMessageAppendsRandomSuffixWhenFilenameExists() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let config = makeTestConfig()
+        let mockBot = MockBot()
+        let testDocumentData = Data([0x25, 0x50, 0x44, 0x46])
+        mockBot.loadFileResult = (data: testDocumentData, filePath: "report.pdf")
+
+        // Pre-create the file to simulate it already exists
+        mockFileWorker.fileSystem["/test/kb/assets/report.pdf"] = "existing file"
+
+        let app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: LinkProcessor(),
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+
+        let testPath = "/test/kb/journals/2025_01_01.md"
+        let timeString = "14:30"
+
+        try await app.handleDocumentMessage(
+            fileId: "doc_123",
+            fileName: "report.pdf",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
+
+        // Verify that the new file was saved with a different name
+        let assetKeys = mockFileWorker.fileSystem.keys.filter { $0.hasPrefix("/test/kb/assets/report_") }
+        #expect(assetKeys.count == 1)
+
+        // Verify the new filename has the pattern report_XXXXXXXX.pdf
+        let newAssetPath = try #require(assetKeys.first)
+        let newFileName = URL(fileURLWithPath: newAssetPath).lastPathComponent
+        #expect(newFileName.hasPrefix("report_"))
+        #expect(newFileName.hasSuffix(".pdf"))
+        #expect(newFileName.count > "report_.pdf".count) // Has random suffix
+
+        // Verify the journal entry uses the new filename
+        let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
+        #expect(writtenContent.contains("[📄 \(newFileName)](../assets/\(newFileName))"))
+    }
+
+    @Test func handleImageMessageAppendsRandomSuffixWhenFilenameExists() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let config = makeTestConfig()
+        let mockBot = MockBot()
+        let testImageData = Data([0xFF, 0xD8, 0xFF])
+        mockBot.loadFileResult = (data: testImageData, filePath: "photo_123.jpg")
+
+        // Pre-create the file to simulate it already exists
+        mockFileWorker.fileSystem["/test/kb/assets/photo_123.jpg"] = "existing file"
+
+        let app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: LinkProcessor(),
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+
+        let testPath = "/test/kb/journals/2025_01_01.md"
+        let timeString = "15:00"
+
+        try await app.handleImageMessage(fileId: "photo_123", caption: nil, timeString: timeString, filePath: testPath)
+
+        // Verify that the new file was saved with a different name
+        let assetKeys = mockFileWorker.fileSystem.keys.filter { $0.hasPrefix("/test/kb/assets/photo_123_") }
+        #expect(assetKeys.count == 1)
+
+        // Verify the new filename has the pattern photo_123_XXXXXXXX.jpg
+        let newAssetPath = try #require(assetKeys.first)
+        let newFileName = URL(fileURLWithPath: newAssetPath).lastPathComponent
+        #expect(newFileName.hasPrefix("photo_123_"))
+        #expect(newFileName.hasSuffix(".jpg"))
+        #expect(newFileName.count > "photo_123_.jpg".count) // Has random suffix
+
+        // Verify the journal entry uses the new filename
+        let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
+        #expect(writtenContent.contains("![image](../assets/\(newFileName))"))
+    }
+
+    @Test func handleDocumentMessageWithMultipleCollisionsEventuallySucceeds() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let config = makeTestConfig()
+        let mockBot = MockBot()
+        let testDocumentData = Data([0x25, 0x50])
+        mockBot.loadFileResult = (data: testDocumentData, filePath: "data.txt")
+
+        // Pre-create the file to simulate it already exists
+        mockFileWorker.fileSystem["/test/kb/assets/data.txt"] = "existing file"
+
+        let app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: LinkProcessor(),
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+
+        let testPath = "/test/kb/journals/2025_01_01.md"
+        let timeString = "16:00"
+
+        try await app.handleDocumentMessage(
+            fileId: "data_file",
+            fileName: "data.txt",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
+
+        // Verify that a file with a unique name was created
+        let assetKeys = mockFileWorker.fileSystem.keys.filter { $0.hasPrefix("/test/kb/assets/data_") && $0.hasSuffix(".txt") }
+        #expect(assetKeys.count == 1)
+
+        // Original file should still exist
+        #expect(mockFileWorker.fileSystem["/test/kb/assets/data.txt"] == "existing file")
+    }
+
     // MARK: - Helpers
 
     private func makeTestConfig() -> Config {
