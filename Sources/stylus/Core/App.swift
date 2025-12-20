@@ -125,8 +125,8 @@ struct App {
             assetsURL: assetsURL,
         )
 
-        let fileExtension = URL(fileURLWithPath: finalFileName).pathExtension.lowercased()
-        let isPDF = fileExtension == "pdf"
+        let finalFileExtension = URL(fileURLWithPath: finalFileName).pathExtension.lowercased()
+        let isPDF = finalFileExtension == "pdf"
         let documentMarkdown = if isPDF {
             "![\(finalFileName)](../assets/\(finalFileName))"
         } else {
