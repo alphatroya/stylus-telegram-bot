@@ -1,5 +1,22 @@
 import Foundation
 
+// MARK: - FileNameGenerationError
+
+enum FileNameGenerationError: Error, LocalizedError {
+    case maxRetriesExceeded(fileName: String, attempts: Int)
+
+    // MARK: Computed Properties
+
+    var errorDescription: String? {
+        switch self {
+        case let .maxRetriesExceeded(fileName, attempts):
+            "Failed to generate unique filename for '\(fileName)' after \(attempts) attempts"
+        }
+    }
+}
+
+// MARK: - App
+
 struct App {
     // MARK: Static Properties
 
@@ -85,13 +102,7 @@ struct App {
             }
         }
 
-        throw NSError(
-            domain: "FileNameGenerationError",
-            code: 1,
-            userInfo: [
-                NSLocalizedDescriptionKey: "Failed to generate unique filename for '\(baseFileName)' after \(Self.maxFileNameRetries) attempts",
-            ],
-        )
+        throw FileNameGenerationError.maxRetriesExceeded(fileName: baseFileName, attempts: Self.maxFileNameRetries)
     }
 
     /// Internal for reuse and testing from the test target.
