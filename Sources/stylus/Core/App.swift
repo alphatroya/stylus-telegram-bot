@@ -56,7 +56,7 @@ struct App {
             do {
                 try await journalWriter.saveImageFile(data: data, to: assetFilePath)
                 return fileName
-            } catch ImageFileError.fileAlreadyExists {
+            } catch let error as ImageFileError where error == .fileAlreadyExists(assetFilePath) {
                 // Generate a unique filename by appending a random string
                 let randomSuffix = UUID().uuidString.prefix(8)
                 let fileURL = URL(fileURLWithPath: baseFileName)
@@ -70,6 +70,9 @@ struct App {
                 }
 
                 assetFilePath = assetsURL.appendingPathComponent(fileName).path
+            } catch {
+                // Re-throw any other errors
+                throw error
             }
         }
     }
