@@ -83,7 +83,7 @@ struct AppTests {
         #expect(appendedContent == "- TODO **10:15** Second message #stylus-inbox\n")
     }
 
-    @Test func handleJustTextMessageProcessesLinksInText() async {
+    @Test func linkProcessorAndTagManagerWorkTogether() async {
         let mockMetadataProvider = MockMetadataProvider()
         await mockMetadataProvider.setMockTitle("Example Page", for: "https://example.com")
 
@@ -94,8 +94,7 @@ struct AppTests {
         let processedText = await linkProcessor.processLinks(in: text, metadataProvider: { mockMetadataProvider })
         let taggedText = addStylusInboxTag(to: processedText)
 
-        // Since we can't inject the metadata provider into App directly,
-        // we verify that the link processing logic works correctly
+        // Verify that link processing and tag management work correctly together
         #expect(processedText == "Check out [Example Page](https://example.com) for info")
         #expect(taggedText == "Check out [Example Page](https://example.com) for info #stylus-inbox")
     }
