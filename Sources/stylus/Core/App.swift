@@ -9,6 +9,11 @@ struct App {
     var dateFormatter: StylusDateFormatter = .init()
     var bot: Bot
 
+    // MARK: Constants
+
+    private static let uuidSuffixLength = 8
+    private static let maxFileNameRetries = 100
+
     // MARK: Functions
 
     /// Internal for reuse and testing from the test target.
@@ -51,14 +56,15 @@ struct App {
     func saveFileWithUniqueFilename(data: Data, baseFileName: String, assetsURL: URL) async throws -> String {
         var fileName = baseFileName
         var assetFilePath = assetsURL.appendingPathComponent(fileName).path
+        var retryCount = 0
 
-        while true {
+        while retryCount < Self.maxFileNameRetries {
             do {
                 try await journalWriter.saveImageFile(data: data, to: assetFilePath)
                 return fileName
             } catch let error as ImageFileError where error == .fileAlreadyExists(assetFilePath) {
                 // Generate a unique filename by appending a random string
-                let randomSuffix = UUID().uuidString.prefix(8)
+                let randomSuffix = UUID().uuidString.prefix(Self.uuidSuffixLength)
                 let fileURL = URL(fileURLWithPath: baseFileName)
                 let nameWithoutExtension = fileURL.deletingPathExtension().lastPathComponent
                 let fileExtension = fileURL.pathExtension
@@ -70,11 +76,18 @@ struct App {
                 }
 
                 assetFilePath = assetsURL.appendingPathComponent(fileName).path
+                retryCount += 1
             } catch {
                 // Re-throw any other errors
                 throw error
             }
         }
+
+        throw NSError(
+            domain: "FileNameGenerationError",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Failed to generate unique filename after \(Self.maxFileNameRetries) attempts"],
+        )
     }
 
     /// Internal for reuse and testing from the test target.
