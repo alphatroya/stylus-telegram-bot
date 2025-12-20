@@ -26,10 +26,12 @@ struct App {
 
         let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
         let fileExtension = URL(fileURLWithPath: filePathInfo).pathExtension
-        let fileName = fileExtension.isEmpty ? "\(fileId)" : "\(fileId).\(fileExtension)"
-        let assetFilePath = assetsURL.appendingPathComponent(fileName).path
-
-        try await journalWriter.saveImageFile(data: fileData, to: assetFilePath)
+        let baseFileName = fileExtension.isEmpty ? "\(fileId)" : "\(fileId).\(fileExtension)"
+        let fileName = try await saveFileWithUniqueFilename(
+            data: fileData,
+            baseFileName: baseFileName,
+            assetsURL: assetsURL,
+        )
 
         let imageMarkdown = "![image](../assets/\(fileName))"
 
@@ -46,22 +48,51 @@ struct App {
     }
 
     /// Internal for reuse and testing from the test target.
+    func saveFileWithUniqueFilename(data: Data, baseFileName: String, assetsURL: URL) async throws -> String {
+        var fileName = baseFileName
+        var assetFilePath = assetsURL.appendingPathComponent(fileName).path
+
+        while true {
+            do {
+                try await journalWriter.saveImageFile(data: data, to: assetFilePath)
+                return fileName
+            } catch ImageFileError.fileAlreadyExists {
+                // Generate a unique filename by appending a random string
+                let randomSuffix = UUID().uuidString.prefix(8)
+                let fileURL = URL(fileURLWithPath: baseFileName)
+                let nameWithoutExtension = fileURL.deletingPathExtension().lastPathComponent
+                let fileExtension = fileURL.pathExtension
+
+                fileName = if fileExtension.isEmpty {
+                    "\(nameWithoutExtension)_\(randomSuffix)"
+                } else {
+                    "\(nameWithoutExtension)_\(randomSuffix).\(fileExtension)"
+                }
+
+                assetFilePath = assetsURL.appendingPathComponent(fileName).path
+            }
+        }
+    }
+
+    /// Internal for reuse and testing from the test target.
     func handleDocumentMessage(fileId: String, fileName: String?, caption: String?, timeString: String, filePath: String) async throws {
         let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
         try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
 
         let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
         let fileExtension = URL(fileURLWithPath: filePathInfo).pathExtension
-        let finalFileName = if let fileName, !fileName.isEmpty {
+        let baseFileName = if let fileName, !fileName.isEmpty {
             fileName
         } else if !fileExtension.isEmpty {
             "\(fileId).\(fileExtension)"
         } else {
             fileId
         }
-        let assetFilePath = assetsURL.appendingPathComponent(finalFileName).path
-
-        try await journalWriter.saveImageFile(data: fileData, to: assetFilePath)
+        let finalFileName = try await saveFileWithUniqueFilename(
+            data: fileData,
+            baseFileName: baseFileName,
+            assetsURL: assetsURL,
+        )
 
         let documentMarkdown = "[📄 \(finalFileName)](../assets/\(finalFileName))"
 
