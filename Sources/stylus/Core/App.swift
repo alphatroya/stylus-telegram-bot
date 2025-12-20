@@ -1,6 +1,13 @@
 import Foundation
 
 struct App {
+    // MARK: Static Properties
+
+    // MARK: Constants
+
+    private static let uuidSuffixLength = 8
+    private static let maxFileNameRetries = 100
+
     // MARK: Properties
 
     var config: Config
@@ -8,11 +15,6 @@ struct App {
     var linkProcessor: LinkProcessor = .init()
     var dateFormatter: StylusDateFormatter = .init()
     var bot: Bot
-
-    // MARK: Constants
-
-    private static let uuidSuffixLength = 8
-    private static let maxFileNameRetries = 100
 
     // MARK: Functions
 
@@ -86,7 +88,9 @@ struct App {
         throw NSError(
             domain: "FileNameGenerationError",
             code: 1,
-            userInfo: [NSLocalizedDescriptionKey: "Failed to generate unique filename for '\(baseFileName)' after \(Self.maxFileNameRetries) attempts"],
+            userInfo: [
+                NSLocalizedDescriptionKey: "Failed to generate unique filename for '\(baseFileName)' after \(Self.maxFileNameRetries) attempts",
+            ],
         )
     }
 
