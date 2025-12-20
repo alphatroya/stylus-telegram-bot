@@ -86,7 +86,7 @@ struct App {
         throw NSError(
             domain: "FileNameGenerationError",
             code: 1,
-            userInfo: [NSLocalizedDescriptionKey: "Failed to generate unique filename after \(Self.maxFileNameRetries) attempts"],
+            userInfo: [NSLocalizedDescriptionKey: "Failed to generate unique filename for '\(baseFileName)' after \(Self.maxFileNameRetries) attempts"],
         )
     }
 
