@@ -83,37 +83,20 @@ struct AppTests {
         #expect(appendedContent == "- TODO **10:15** Second message #stylus-inbox\n")
     }
 
-    @Test func handleJustTextMessageProcessesLinksInText() async {
-        let mockFileWorker = MockFileWorker()
-        let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = makeTestConfig()
-        let mockBot = MockBot()
+    @Test func linkProcessorAndTagManagerWorkTogether() async {
         let mockMetadataProvider = MockMetadataProvider()
         await mockMetadataProvider.setMockTitle("Example Page", for: "https://example.com")
 
         let linkProcessor = LinkProcessor()
-        let app = App(
-            config: config,
-            journalWriter: journalWriter,
-            linkProcessor: linkProcessor,
-            dateFormatter: StylusDateFormatter(),
-            bot: mockBot,
-        )
-
-        let testPath = "/test/journal.md"
-        let timeString = "11:00"
         let text = "Check out https://example.com for info"
 
         // Process the text through the link processor with mock provider
         let processedText = await linkProcessor.processLinks(in: text, metadataProvider: { mockMetadataProvider })
         let taggedText = addStylusInboxTag(to: processedText)
-        let expectedContent = "- TODO **11:00** \(taggedText)\n"
 
-        // Since we can't inject the metadata provider into App directly,
-        // we verify that the link processing logic works correctly
+        // Verify that link processing and tag management work correctly together
         #expect(processedText == "Check out [Example Page](https://example.com) for info")
         #expect(taggedText == "Check out [Example Page](https://example.com) for info #stylus-inbox")
-        #expect(expectedContent == "- TODO **11:00** Check out [Example Page](https://example.com) for info #stylus-inbox\n")
     }
 
     @Test func handleImageMessageCreatesCorrectMarkdownWithoutCaption() async throws {
