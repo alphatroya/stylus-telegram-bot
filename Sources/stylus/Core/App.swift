@@ -125,7 +125,13 @@ struct App {
             assetsURL: assetsURL,
         )
 
-        let documentMarkdown = "[📄 \(finalFileName)](../assets/\(finalFileName))"
+        let finalFileExtension = URL(fileURLWithPath: finalFileName).pathExtension.lowercased()
+        let isPDF = finalFileExtension == "pdf"
+        let documentMarkdown = if isPDF {
+            "![\(finalFileName)](../assets/\(finalFileName))"
+        } else {
+            "[\(finalFileName)](../assets/\(finalFileName))"
+        }
 
         let captionText = caption ?? ""
         let processedCaptionText = await linkProcessor.processLinks(in: captionText)

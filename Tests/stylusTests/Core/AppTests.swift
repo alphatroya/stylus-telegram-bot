@@ -296,7 +296,7 @@ struct AppTests {
         #expect(mockFileWorker.directories.contains("/test/kb/assets"))
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent == "- TODO **14:30** #stylus-inbox\ncollapsed:: true\n    - [📄 report.pdf](../assets/report.pdf)\n")
+        #expect(writtenContent == "- TODO **14:30** #stylus-inbox\ncollapsed:: true\n    - ![report.pdf](../assets/report.pdf)\n")
     }
 
     @Test func handleDocumentMessageCreatesCorrectMarkdownWithCaption() async throws {
@@ -331,7 +331,7 @@ struct AppTests {
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
         #expect(writtenContent ==
-            "- TODO **15:45** Important files archive #stylus-inbox\ncollapsed:: true\n    - [📄 files.zip](../assets/files.zip)\n")
+            "- TODO **15:45** Important files archive #stylus-inbox\ncollapsed:: true\n    - [files.zip](../assets/files.zip)\n")
     }
 
     @Test func handleDocumentMessageHandlesNilFileName() async throws {
@@ -359,7 +359,7 @@ struct AppTests {
         #expect(mockFileWorker.fileSystem[assetPath] != nil)
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent == "- TODO **16:00** #stylus-inbox\ncollapsed:: true\n    - [📄 file_789.bin](../assets/file_789.bin)\n")
+        #expect(writtenContent == "- TODO **16:00** #stylus-inbox\ncollapsed:: true\n    - [file_789.bin](../assets/file_789.bin)\n")
     }
 
     @Test func handleDocumentMessageHandlesEmptyFileName() async throws {
@@ -387,7 +387,7 @@ struct AppTests {
         #expect(mockFileWorker.fileSystem[assetPath] != nil)
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent == "- TODO **17:30** #stylus-inbox\ncollapsed:: true\n    - [📄 document_999](../assets/document_999)\n")
+        #expect(writtenContent == "- TODO **17:30** #stylus-inbox\ncollapsed:: true\n    - [document_999](../assets/document_999)\n")
     }
 
     @Test func handleDocumentMessageSavesDocumentToAssetsFolder() async throws {
@@ -454,7 +454,7 @@ struct AppTests {
         #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
         let appendedContent = try #require(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8))
         #expect(appendedContent ==
-            "- TODO **19:00** Monthly invoice #stylus-inbox\ncollapsed:: true\n    - [📄 invoice.pdf](../assets/invoice.pdf)\n")
+            "- TODO **19:00** Monthly invoice #stylus-inbox\ncollapsed:: true\n    - ![invoice.pdf](../assets/invoice.pdf)\n")
     }
 
     @Test func handleDocumentMessageAppendsRandomSuffixWhenFilenameExists() async throws {
@@ -500,7 +500,7 @@ struct AppTests {
 
         // Verify the journal entry uses the new filename
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent.contains("[📄 \(newFileName)](../assets/\(newFileName))"))
+        #expect(writtenContent.contains("![\(newFileName)](../assets/\(newFileName))"))
     }
 
     @Test func handleImageMessageAppendsRandomSuffixWhenFilenameExists() async throws {
