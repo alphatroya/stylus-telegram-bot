@@ -37,7 +37,6 @@ final class TelegramBot: Bot, @unchecked Sendable {
 
     func launch() -> AsyncThrowingStream<Message, Swift.Error> {
         AsyncThrowingStream { continuation in
-            // TODO: need to replace this GCD call by actor or more swift concurrency solution
             DispatchQueue.global().async {
                 while let update = self.bot.nextUpdateSync() {
                     guard let message = update.message, let from = message.from else {

@@ -18,7 +18,7 @@ protocol FileWorker: Sendable {
     func fileExists(at path: String) -> Bool
 
     func createDirectory(
-        at: String,
+        at path: String,
         createIntermediates: Bool,
         attributes: [FileAttributeKey: Any]?,
     ) throws
