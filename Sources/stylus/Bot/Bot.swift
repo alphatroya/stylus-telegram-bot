@@ -10,7 +10,7 @@ struct Message {
         let name: String?
     }
 
-    typealias ID = Int
+    typealias MessageID = Int
 
     enum MessageType {
         case justText(String)
@@ -20,7 +20,7 @@ struct Message {
 
     // MARK: Properties
 
-    var id: ID
+    var id: MessageID
     var from: From
     var date: Date
     var messageType: MessageType
@@ -32,6 +32,6 @@ protocol Bot {
     typealias File = Data
 
     func launch() -> AsyncThrowingStream<Message, Error>
-    func respondAsSaved(on: Message)
+    func respondAsSaved(on message: Message)
     func loadFile(with: String) async throws -> (data: File, filePath: String)
 }
