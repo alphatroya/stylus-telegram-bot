@@ -12,7 +12,9 @@ struct LinkProcessor {
             Optionally("s")
             "://"
             OneOrMore {
-                CharacterClass.anyOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~:/?#[]@!$&'()*+,;=%")
+                CharacterClass.anyOf(
+                    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~:/?#[]@!$&'()*+,;=%",
+                )
             }
         }
 
@@ -29,7 +31,10 @@ struct LinkProcessor {
     }
 
     /// Fetches the title of a web page from the given URL
-    func fetchPageTitle(from urlString: String, provider: LinkMetadataProviderProtocol) async throws -> (String?, URL)? {
+    func fetchPageTitle(
+        from urlString: String,
+        provider: LinkMetadataProviderProtocol,
+    ) async throws -> (String?, URL)? {
         guard let url = URL(string: urlString) else {
             return nil
         }

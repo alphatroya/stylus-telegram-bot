@@ -125,7 +125,8 @@ struct AppTests {
         #expect(mockFileWorker.directories.contains("/test/kb/assets"))
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent == "- TODO **14:30** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/file_123.jpg)\n")
+        #expect(writtenContent ==
+            "- TODO **14:30** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/file_123.jpg)\n")
     }
 
     @Test func handleImageMessageCreatesCorrectMarkdownWithCaption() async throws {
@@ -148,13 +149,22 @@ struct AppTests {
         let timeString = "15:45"
         let caption = "Beautiful sunset"
 
-        try await app.handleImageMessage(fileId: "photo_456", caption: caption, timeString: timeString, filePath: testPath)
+        try await app.handleImageMessage(
+            fileId: "photo_456",
+            caption: caption,
+            timeString: timeString,
+            filePath: testPath,
+        )
 
         #expect(mockBot.loadFileCallCount == 1)
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent ==
-            "- TODO **15:45** Beautiful sunset #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/photo_456.png)\n")
+        #expect(writtenContent == """
+        - TODO **15:45** Beautiful sunset #stylus-inbox
+        collapsed:: true
+            - ![image](../assets/photo_456.png)
+
+        """)
     }
 
     @Test func handleImageMessageHandlesFileWithoutExtension() async throws {
@@ -176,13 +186,19 @@ struct AppTests {
         let testPath = "/test/kb/journals/2025_01_01.md"
         let timeString = "16:00"
 
-        try await app.handleImageMessage(fileId: "file_789", caption: nil, timeString: timeString, filePath: testPath)
+        try await app.handleImageMessage(
+            fileId: "file_789",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
 
         let assetPath = "/test/kb/assets/file_789"
         #expect(mockFileWorker.fileSystem[assetPath] != nil)
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent == "- TODO **16:00** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/file_789)\n")
+        #expect(writtenContent ==
+            "- TODO **16:00** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/file_789)\n")
     }
 
     @Test func handleImageMessageSavesImageToAssetsFolder() async throws {
@@ -229,10 +245,16 @@ struct AppTests {
         let testPath = "/test/kb/journals/2025_01_01.md"
         let timeString = "18:00"
 
-        try await app.handleImageMessage(fileId: "animation", caption: "", timeString: timeString, filePath: testPath)
+        try await app.handleImageMessage(
+            fileId: "animation",
+            caption: "",
+            timeString: timeString,
+            filePath: testPath,
+        )
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent == "- TODO **18:00** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/animation.gif)\n")
+        #expect(writtenContent ==
+            "- TODO **18:00** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/animation.gif)\n")
     }
 
     @Test func handleImageMessageAppendsToExistingJournal() async throws {
@@ -257,11 +279,20 @@ struct AppTests {
 
         let timeString = "19:00"
 
-        try await app.handleImageMessage(fileId: "photo", caption: "New photo", timeString: timeString, filePath: testPath)
+        try await app.handleImageMessage(
+            fileId: "photo",
+            caption: "New photo",
+            timeString: timeString,
+            filePath: testPath,
+        )
 
         #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
-        let appendedContent = try #require(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8))
-        #expect(appendedContent == "- TODO **19:00** New photo #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/photo.jpg)\n")
+        let appendedContent = try #require(String(
+            data: mockFileWorker.mockFileHandle.data,
+            encoding: .utf8,
+        ))
+        #expect(appendedContent ==
+            "- TODO **19:00** New photo #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/photo.jpg)\n")
     }
 
     // MARK: - Helpers
