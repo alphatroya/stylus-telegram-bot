@@ -112,8 +112,23 @@ struct App {
 
         let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
         let fileExtension = URL(fileURLWithPath: filePathInfo).pathExtension
-        let baseFileName = if let fileName, !fileName.isEmpty {
-            fileName
+
+        // Sanitize fileName to prevent path traversal attacks
+        let preferredFileName: String
+        if let fileName, !fileName.isEmpty {
+            // Use only the last path component to avoid directory traversal (e.g., "../../secret")
+            let baseName = (fileName as NSString).lastPathComponent
+            if baseName.isEmpty || baseName == "." || baseName == ".." {
+                preferredFileName = ""
+            } else {
+                preferredFileName = baseName
+            }
+        } else {
+            preferredFileName = ""
+        }
+
+        let baseFileName = if !preferredFileName.isEmpty {
+            preferredFileName
         } else if !fileExtension.isEmpty {
             "\(fileId).\(fileExtension)"
         } else {

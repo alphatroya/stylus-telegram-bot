@@ -581,6 +581,146 @@ struct AppTests {
         #expect(mockFileWorker.fileSystem["/test/kb/assets/data.txt"] == "existing file")
     }
 
+    @Test func handleDocumentMessageSanitizesPathTraversalInFileName() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let config = makeTestConfig()
+        let mockBot = MockBot()
+        mockBot.mockFileData = Data("test document".utf8)
+        mockBot.mockFilePathInfo = "file_path_info.pdf"
+
+        let app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: LinkProcessor(),
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+
+        let testPath = "/test/journals/2024_01_01.md"
+        let timeString = "12:00"
+
+        // Try path traversal attack with ../../.ssh/authorized_keys
+        try await app.handleDocumentMessage(
+            fileId: "malicious_123",
+            fileName: "../../.ssh/authorized_keys",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
+
+        // Verify the file was saved with sanitized name (just "authorized_keys")
+        let expectedAssetPath = "/test/kb/assets/authorized_keys"
+        #expect(mockFileWorker.fileSystem[expectedAssetPath] != nil)
+
+        // Verify malicious path was NOT used
+        let maliciousPath = "/test/kb/../../.ssh/authorized_keys"
+        #expect(mockFileWorker.fileSystem[maliciousPath] == nil)
+    }
+
+    @Test func handleDocumentMessageRejectsDotFileName() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let config = makeTestConfig()
+        let mockBot = MockBot()
+        mockBot.mockFileData = Data("test document".utf8)
+        mockBot.mockFilePathInfo = "file_path_info.pdf"
+
+        let app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: LinkProcessor(),
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+
+        let testPath = "/test/journals/2024_01_01.md"
+        let timeString = "12:00"
+
+        // Try using "." as filename
+        try await app.handleDocumentMessage(
+            fileId: "test_456",
+            fileName: ".",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
+
+        // Verify the file was saved with fileId fallback instead of "."
+        let expectedAssetPath = "/test/kb/assets/test_456.pdf"
+        #expect(mockFileWorker.fileSystem[expectedAssetPath] != nil)
+    }
+
+    @Test func handleDocumentMessageRejectsDotDotFileName() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let config = makeTestConfig()
+        let mockBot = MockBot()
+        mockBot.mockFileData = Data("test document".utf8)
+        mockBot.mockFilePathInfo = "file_path_info.txt"
+
+        let app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: LinkProcessor(),
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+
+        let testPath = "/test/journals/2024_01_01.md"
+        let timeString = "12:00"
+
+        // Try using ".." as filename
+        try await app.handleDocumentMessage(
+            fileId: "test_789",
+            fileName: "..",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
+
+        // Verify the file was saved with fileId fallback instead of ".."
+        let expectedAssetPath = "/test/kb/assets/test_789.txt"
+        #expect(mockFileWorker.fileSystem[expectedAssetPath] != nil)
+    }
+
+    @Test func handleDocumentMessageExtractsBaseNameFromComplexPath() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let config = makeTestConfig()
+        let mockBot = MockBot()
+        mockBot.mockFileData = Data("test document".utf8)
+        mockBot.mockFilePathInfo = "file_path_info.pdf"
+
+        let app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: LinkProcessor(),
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+
+        let testPath = "/test/journals/2024_01_01.md"
+        let timeString = "12:00"
+
+        // Try path with multiple directory components
+        try await app.handleDocumentMessage(
+            fileId: "test_complex",
+            fileName: "/var/tmp/malicious/document.pdf",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
+
+        // Verify only the basename was used
+        let expectedAssetPath = "/test/kb/assets/document.pdf"
+        #expect(mockFileWorker.fileSystem[expectedAssetPath] != nil)
+
+        // Verify full path was NOT used
+        let maliciousPath = "/test/kb/assets/var/tmp/malicious/document.pdf"
+        #expect(mockFileWorker.fileSystem[maliciousPath] == nil)
+    }
+
     // MARK: - Helpers
 
     private func makeTestConfig() -> Config {
