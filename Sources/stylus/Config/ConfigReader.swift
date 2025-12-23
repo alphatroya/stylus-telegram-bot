@@ -4,7 +4,8 @@ import SystemPackage
 
 // MARK: - SecretString
 
-/// A wrapper for sensitive string values that prevents accidental exposure in logs, debug output, and string interpolation.
+/// A wrapper for sensitive string values that prevents accidental exposure in logs,
+/// debug output, and string interpolation.
 struct SecretString {
     // MARK: Properties
 
@@ -64,7 +65,8 @@ extension SecretString: Codable {
 /// Configuration structure for the Stylus Telegram Bot.
 ///
 /// Security Notes:
-/// - The `telegramBotApiKey` is wrapped in `SecretString` to prevent accidental exposure in logs, debug output, or string interpolation
+/// - The `telegramBotApiKey` is wrapped in `SecretString` to prevent accidental exposure in logs,
+///   debug output, or string interpolation
 /// - Always use `.unsafeValue` when you need to access the actual API key value for API calls
 /// - The `Config` struct implements custom `description` and `debugDescription` to redact sensitive information
 struct Config {
@@ -80,7 +82,10 @@ struct Config {
 
 extension Config: CustomStringConvertible {
     var description: String {
-        "Config(telegramBotApiKey: [REDACTED], telegramUserID: \(telegramUserID), knowledgeBaseLocation: \"\(knowledgeBaseLocation)\")"
+        """
+        Config(telegramBotApiKey: [REDACTED], telegramUserID: \(telegramUserID), \
+        knowledgeBaseLocation: "\(knowledgeBaseLocation)")
+        """
     }
 }
 
@@ -110,7 +115,9 @@ func readConfig(provider: ConfigProvider) throws -> Config {
     let configReader = ConfigReader(providers: [provider])
 
     return try .init(
-        telegramBotApiKey: SecretString(configReader.requiredString(forKey: "telegramBotApiKey", isSecret: true)),
+        telegramBotApiKey: SecretString(
+            configReader.requiredString(forKey: "telegramBotApiKey", isSecret: true),
+        ),
         telegramUserID: configReader.requiredInt(forKey: "telegramUserId"),
         knowledgeBaseLocation: configReader.requiredString(forKey: "knowledgeBaseLocation"),
     )

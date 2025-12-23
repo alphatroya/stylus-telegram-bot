@@ -1,2 +1,9 @@
 disabled_rules:
   - trailing_comma
+
+identifier_name:
+  min_length:
+    warning: 2
+
+excluded:
+  - .build

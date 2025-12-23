@@ -188,7 +188,12 @@ struct App {
 
             case let .image(fileId, caption):
                 do {
-                    try await handleImageMessage(fileId: fileId, caption: caption, timeString: timeString, filePath: filePath)
+                    try await handleImageMessage(
+                        fileId: fileId,
+                        caption: caption,
+                        timeString: timeString,
+                        filePath: filePath,
+                    )
                 } catch {
                     print("Error processing image err: \(error)")
                     continue
