@@ -4,7 +4,6 @@
 - Test single: `swift test --filter <test_name>`
 - Run: `swift run stylus`
 - Format: `swiftformat .` (or use mise: `mise exec -- swiftformat .`)
-- Lint: `swiftlint lint` (or use mise: `mise exec -- swiftlint lint`)
 
 # Code Style Guidelines
 - Use Swift 6.2 with modern concurrency (target: macOS 15+)
