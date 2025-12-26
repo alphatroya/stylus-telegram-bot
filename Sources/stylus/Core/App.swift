@@ -106,14 +106,35 @@ struct App {
     }
 
     /// Internal for reuse and testing from the test target.
-    func handleDocumentMessage(fileId: String, fileName: String?, caption: String?, timeString: String, filePath: String) async throws {
+    func handleDocumentMessage(
+        fileId: String,
+        fileName: String?,
+        caption: String?,
+        timeString: String,
+        filePath: String,
+    ) async throws {
         let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
         try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
 
         let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
         let fileExtension = URL(fileURLWithPath: filePathInfo).pathExtension
-        let baseFileName = if let fileName, !fileName.isEmpty {
-            fileName
+
+        // Sanitize fileName to prevent path traversal attacks
+        let preferredFileName: String
+        if let fileName, !fileName.isEmpty {
+            // Use only the last path component to avoid directory traversal (e.g., "../../secret")
+            let baseName = (fileName as NSString).lastPathComponent
+            if baseName.isEmpty || baseName == "." || baseName == ".." {
+                preferredFileName = ""
+            } else {
+                preferredFileName = baseName
+            }
+        } else {
+            preferredFileName = ""
+        }
+
+        let baseFileName = if !preferredFileName.isEmpty {
+            preferredFileName
         } else if !fileExtension.isEmpty {
             "\(fileId).\(fileExtension)"
         } else {
@@ -151,57 +172,60 @@ struct App {
         let sequence = bot.launch()
 
         for try await message in sequence {
-            guard message.from.id == config.telegramUserID else {
-                print(
-                    "Wrong user sent a message, \(message.from.id) - \(message.from.name ?? "NONE")",
-                )
-                continue
-            }
-
-            let messageDateFormatted = await dateFormatter.formatDate("yyyy_MM_dd", date: message.date)
-            let filePath = journalsURL.appendingPathComponent("\(messageDateFormatted).md").path
-
-            let timeString = await dateFormatter.formatDate("HH:mm", date: message.date)
-            switch message.messageType {
-            case let .justText(text):
-                do {
-                    try await handleJustTextMessage(text: text, timeString: timeString, filePath: filePath)
-                } catch {
-                    print("Error processing message: \(text), err: \(error)")
-                    continue
-                }
-
-            case let .image(fileId, caption):
-                do {
-                    try await handleImageMessage(
-                        fileId: fileId,
-                        caption: caption,
-                        timeString: timeString,
-                        filePath: filePath,
-                    )
-                } catch {
-                    print("Error processing image err: \(error)")
-                    continue
-                }
-
-            case let .document(fileId, fileName, caption):
-                do {
-                    try await handleDocumentMessage(
-                        fileId: fileId,
-                        fileName: fileName,
-                        caption: caption,
-                        timeString: timeString,
-                        filePath: filePath,
-                    )
-                } catch {
-                    print("Error processing document err: \(error)")
-                    continue
-                }
-            }
-
-            print("Successfully added to journal: \(filePath)")
-            bot.respondAsSaved(on: message)
+            try await processMessage(message, journalsURL: journalsURL)
         }
         fatalError("Bot stream terminated unexpectedly. The bot should run continuously unless explicitly stopped.")
+    }
+
+    private func processMessage(_ message: Message, journalsURL: URL) async throws {
+        guard message.from.id == config.telegramUserID else {
+            print("Wrong user sent a message, \(message.from.id) - \(message.from.name ?? "NONE")")
+            return
+        }
+
+        let messageDateFormatted = await dateFormatter.formatDate("yyyy_MM_dd", date: message.date)
+        let filePath = journalsURL.appendingPathComponent("\(messageDateFormatted).md").path
+        let timeString = await dateFormatter.formatDate("HH:mm", date: message.date)
+
+        await handleMessageType(message.messageType, timeString: timeString, filePath: filePath)
+
+        print("Successfully added to journal: \(filePath)")
+        bot.respondAsSaved(on: message)
+    }
+
+    private func handleMessageType(_ messageType: Message.MessageType, timeString: String, filePath: String) async {
+        switch messageType {
+        case let .justText(text):
+            do {
+                try await handleJustTextMessage(text: text, timeString: timeString, filePath: filePath)
+            } catch {
+                print("Error processing message: \(text), err: \(error)")
+            }
+
+        case let .image(fileId, caption):
+            do {
+                try await handleImageMessage(
+                    fileId: fileId,
+                    caption: caption,
+                    timeString: timeString,
+                    filePath: filePath,
+                )
+            } catch {
+                print("Error processing image err: \(error)")
+            }
+
+        case let .document(fileId, fileName, caption):
+            do {
+                try await handleDocumentMessage(
+                    fileId: fileId,
+                    fileName: fileName,
+                    caption: caption,
+                    timeString: timeString,
+                    filePath: filePath,
+                )
+            } catch {
+                print("Error processing document err: \(error)")
+            }
+        }
     }
 }

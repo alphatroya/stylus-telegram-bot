@@ -2,84 +2,83 @@ import Foundation
 @testable import stylus
 import Testing
 
+// MARK: - TestContext
+
+struct TestContext {
+    // MARK: Properties
+
+    let mockFileWorker: MockFileWorker
+    let journalWriter: JournalWriter
+    let config: Config
+    let mockBot: MockBot
+    let app: App
+
+    // MARK: Lifecycle
+
+    init() {
+        mockFileWorker = MockFileWorker()
+        journalWriter = JournalWriter(fileManager: mockFileWorker)
+        config = Config(
+            telegramBotApiKey: SecretString("test-key"),
+            telegramUserID: 123,
+            knowledgeBaseLocation: "/test/kb",
+        )
+        mockBot = MockBot()
+        app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: LinkProcessor(),
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+    }
+}
+
 // MARK: - AppTests
 
 @Suite("AppTests")
 struct AppTests {
     @Test func handleJustTextMessageProcessesTextCorrectly() async throws {
-        let mockFileWorker = MockFileWorker()
-        let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = makeTestConfig()
-        let mockBot = MockBot()
-
-        let app = App(
-            config: config,
-            journalWriter: journalWriter,
-            linkProcessor: LinkProcessor(),
-            dateFormatter: StylusDateFormatter(),
-            bot: mockBot,
-        )
+        let context = TestContext()
 
         let testPath = "/test/journal.md"
         let timeString = "14:30"
         let text = "Test message without links"
 
-        try await app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath)
+        try await context.app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath)
 
-        #expect(mockFileWorker.writeStringToFileCallCount == 1)
-        let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
+        #expect(context.mockFileWorker.writeStringToFileCallCount == 1)
+        let writtenContent = try #require(context.mockFileWorker.fileSystem[testPath])
         #expect(writtenContent == "- TODO **14:30** Test message without links #stylus-inbox\n")
     }
 
     @Test func handleJustTextMessageAddsInboxTag() async throws {
-        let mockFileWorker = MockFileWorker()
-        let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = makeTestConfig()
-        let mockBot = MockBot()
-
-        let app = App(
-            config: config,
-            journalWriter: journalWriter,
-            linkProcessor: LinkProcessor(),
-            dateFormatter: StylusDateFormatter(),
-            bot: mockBot,
-        )
+        let context = TestContext()
 
         let testPath = "/test/journal.md"
         let timeString = "10:15"
         let text = "Simple message"
 
-        try await app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath)
+        try await context.app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath)
 
-        let writtenContent = mockFileWorker.fileSystem[testPath]
+        let writtenContent = context.mockFileWorker.fileSystem[testPath]
         #expect(writtenContent == "- TODO **10:15** Simple message #stylus-inbox\n")
     }
 
     @Test func handleJustTextMessageAppendsToExistingFile() async throws {
-        let mockFileWorker = MockFileWorker()
-        let journalWriter = JournalWriter(fileManager: mockFileWorker)
-        let config = makeTestConfig()
-        let mockBot = MockBot()
-
-        let app = App(
-            config: config,
-            journalWriter: journalWriter,
-            linkProcessor: LinkProcessor(),
-            dateFormatter: StylusDateFormatter(),
-            bot: mockBot,
-        )
+        let context = TestContext()
 
         let testPath = "/test/journal.md"
         let existingContent = "- TODO **09:00** First entry #stylus-inbox\n"
-        mockFileWorker.fileSystem[testPath] = existingContent
+        context.mockFileWorker.fileSystem[testPath] = existingContent
 
         let timeString = "10:15"
         let text = "Second message"
 
-        try await app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath)
+        try await context.app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath)
 
-        #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
-        let appendedContent = String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8)
+        #expect(context.mockFileWorker.fileHandleForWritingCallCount == 1)
+        let appendedContent = String(data: context.mockFileWorker.mockFileHandle.data, encoding: .utf8)
         #expect(appendedContent == "- TODO **10:15** Second message #stylus-inbox\n")
     }
 
@@ -125,8 +124,10 @@ struct AppTests {
         #expect(mockFileWorker.directories.contains("/test/kb/assets"))
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent ==
-            "- TODO **14:30** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/file_123.jpg)\n")
+        #expect(
+            writtenContent ==
+                "- TODO **14:30** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/file_123.jpg)\n",
+        )
     }
 
     @Test func handleImageMessageCreatesCorrectMarkdownWithCaption() async throws {
@@ -197,8 +198,10 @@ struct AppTests {
         #expect(mockFileWorker.fileSystem[assetPath] != nil)
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent ==
-            "- TODO **16:00** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/file_789)\n")
+        #expect(
+            writtenContent ==
+                "- TODO **16:00** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/file_789)\n",
+        )
     }
 
     @Test func handleImageMessageSavesImageToAssetsFolder() async throws {
@@ -253,8 +256,10 @@ struct AppTests {
         )
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent ==
-            "- TODO **18:00** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/animation.gif)\n")
+        #expect(
+            writtenContent ==
+                "- TODO **18:00** #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/animation.gif)\n",
+        )
     }
 
     @Test func handleImageMessageAppendsToExistingJournal() async throws {
@@ -291,8 +296,10 @@ struct AppTests {
             data: mockFileWorker.mockFileHandle.data,
             encoding: .utf8,
         ))
-        #expect(appendedContent ==
-            "- TODO **19:00** New photo #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/photo.jpg)\n")
+        #expect(
+            appendedContent ==
+                "- TODO **19:00** New photo #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/photo.jpg)\n",
+        )
     }
 
     @Test func handleDocumentMessageCreatesCorrectMarkdownWithFileName() async throws {
@@ -327,7 +334,10 @@ struct AppTests {
         #expect(mockFileWorker.directories.contains("/test/kb/assets"))
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent == "- TODO **14:30** #stylus-inbox\ncollapsed:: true\n    - ![report.pdf](../assets/report.pdf)\n")
+        #expect(
+            writtenContent ==
+                "- TODO **14:30** #stylus-inbox\ncollapsed:: true\n    - ![report.pdf](../assets/report.pdf)\n",
+        )
     }
 
     @Test func handleDocumentMessageCreatesCorrectMarkdownWithCaption() async throws {
@@ -361,8 +371,11 @@ struct AppTests {
         #expect(mockBot.loadFileCallCount == 1)
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent ==
-            "- TODO **15:45** Important files archive #stylus-inbox\ncollapsed:: true\n    - [files.zip](../assets/files.zip)\n")
+        #expect(
+            writtenContent ==
+                "- TODO **15:45** Important files archive #stylus-inbox\ncollapsed:: true\n" +
+                "    - [files.zip](../assets/files.zip)\n",
+        )
     }
 
     @Test func handleDocumentMessageHandlesNilFileName() async throws {
@@ -384,13 +397,22 @@ struct AppTests {
         let testPath = "/test/kb/journals/2025_01_01.md"
         let timeString = "16:00"
 
-        try await app.handleDocumentMessage(fileId: "file_789", fileName: nil, caption: nil, timeString: timeString, filePath: testPath)
+        try await app.handleDocumentMessage(
+            fileId: "file_789",
+            fileName: nil,
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
 
         let assetPath = "/test/kb/assets/file_789.bin"
         #expect(mockFileWorker.fileSystem[assetPath] != nil)
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent == "- TODO **16:00** #stylus-inbox\ncollapsed:: true\n    - [file_789.bin](../assets/file_789.bin)\n")
+        #expect(
+            writtenContent ==
+                "- TODO **16:00** #stylus-inbox\ncollapsed:: true\n    - [file_789.bin](../assets/file_789.bin)\n",
+        )
     }
 
     @Test func handleDocumentMessageHandlesEmptyFileName() async throws {
@@ -412,13 +434,22 @@ struct AppTests {
         let testPath = "/test/kb/journals/2025_01_01.md"
         let timeString = "17:30"
 
-        try await app.handleDocumentMessage(fileId: "document_999", fileName: "", caption: nil, timeString: timeString, filePath: testPath)
+        try await app.handleDocumentMessage(
+            fileId: "document_999",
+            fileName: "",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
 
         let assetPath = "/test/kb/assets/document_999"
         #expect(mockFileWorker.fileSystem[assetPath] != nil)
 
         let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
-        #expect(writtenContent == "- TODO **17:30** #stylus-inbox\ncollapsed:: true\n    - [document_999](../assets/document_999)\n")
+        #expect(
+            writtenContent ==
+                "- TODO **17:30** #stylus-inbox\ncollapsed:: true\n    - [document_999](../assets/document_999)\n",
+        )
     }
 
     @Test func handleDocumentMessageSavesDocumentToAssetsFolder() async throws {
@@ -484,8 +515,11 @@ struct AppTests {
 
         #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
         let appendedContent = try #require(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8))
-        #expect(appendedContent ==
-            "- TODO **19:00** Monthly invoice #stylus-inbox\ncollapsed:: true\n    - ![invoice.pdf](../assets/invoice.pdf)\n")
+        #expect(
+            appendedContent ==
+                "- TODO **19:00** Monthly invoice #stylus-inbox\ncollapsed:: true\n" +
+                "    - ![invoice.pdf](../assets/invoice.pdf)\n",
+        )
     }
 
     @Test func handleDocumentMessageAppendsRandomSuffixWhenFilenameExists() async throws {
@@ -605,11 +639,105 @@ struct AppTests {
         )
 
         // Verify that a file with a unique name was created
-        let assetKeys = mockFileWorker.fileSystem.keys.filter { $0.hasPrefix("/test/kb/assets/data_") && $0.hasSuffix(".txt") }
+        let assetKeys = mockFileWorker.fileSystem.keys.filter {
+            $0.hasPrefix("/test/kb/assets/data_") && $0.hasSuffix(".txt")
+        }
         #expect(assetKeys.count == 1)
 
         // Original file should still exist
         #expect(mockFileWorker.fileSystem["/test/kb/assets/data.txt"] == "existing file")
+    }
+
+    @Test func handleDocumentMessageSanitizesPathTraversalInFileName() async throws {
+        let context = TestContext()
+        context.mockBot.loadFileResult = (data: Data("test document".utf8), filePath: "file_path_info.pdf")
+
+        let testPath = "/test/journals/2024_01_01.md"
+        let timeString = "12:00"
+
+        // Try path traversal attack with ../../.ssh/authorized_keys
+        try await context.app.handleDocumentMessage(
+            fileId: "malicious_123",
+            fileName: "../../.ssh/authorized_keys",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
+
+        // Verify the file was saved with sanitized name (just "authorized_keys")
+        let expectedAssetPath = "/test/kb/assets/authorized_keys"
+        #expect(context.mockFileWorker.fileSystem[expectedAssetPath] != nil)
+
+        // Verify malicious path was NOT used
+        let maliciousPath = "/test/kb/../../.ssh/authorized_keys"
+        #expect(context.mockFileWorker.fileSystem[maliciousPath] == nil)
+    }
+
+    @Test func handleDocumentMessageRejectsDotFileName() async throws {
+        let context = TestContext()
+        context.mockBot.loadFileResult = (data: Data("test document".utf8), filePath: "file_path_info.pdf")
+
+        let testPath = "/test/journals/2024_01_01.md"
+        let timeString = "12:00"
+
+        // Try using "." as filename
+        try await context.app.handleDocumentMessage(
+            fileId: "test_456",
+            fileName: ".",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
+
+        // Verify the file was saved with fileId fallback instead of "."
+        let expectedAssetPath = "/test/kb/assets/test_456.pdf"
+        #expect(context.mockFileWorker.fileSystem[expectedAssetPath] != nil)
+    }
+
+    @Test func handleDocumentMessageRejectsDotDotFileName() async throws {
+        let context = TestContext()
+        context.mockBot.loadFileResult = (data: Data("test document".utf8), filePath: "file_path_info.txt")
+
+        let testPath = "/test/journals/2024_01_01.md"
+        let timeString = "12:00"
+
+        // Try using ".." as filename
+        try await context.app.handleDocumentMessage(
+            fileId: "test_789",
+            fileName: "..",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
+
+        // Verify the file was saved with fileId fallback instead of ".."
+        let expectedAssetPath = "/test/kb/assets/test_789.txt"
+        #expect(context.mockFileWorker.fileSystem[expectedAssetPath] != nil)
+    }
+
+    @Test func handleDocumentMessageExtractsBaseNameFromComplexPath() async throws {
+        let context = TestContext()
+        context.mockBot.loadFileResult = (data: Data("test document".utf8), filePath: "file_path_info.pdf")
+
+        let testPath = "/test/journals/2024_01_01.md"
+        let timeString = "12:00"
+
+        // Try path with multiple directory components
+        try await context.app.handleDocumentMessage(
+            fileId: "test_complex",
+            fileName: "/var/tmp/malicious/document.pdf",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+        )
+
+        // Verify only the basename was used
+        let expectedAssetPath = "/test/kb/assets/document.pdf"
+        #expect(context.mockFileWorker.fileSystem[expectedAssetPath] != nil)
+
+        // Verify full path was NOT used
+        let maliciousPath = "/test/kb/assets/var/tmp/malicious/document.pdf"
+        #expect(context.mockFileWorker.fileSystem[maliciousPath] == nil)
     }
 
     // MARK: - Helpers
