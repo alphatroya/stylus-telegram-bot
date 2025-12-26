@@ -15,6 +15,7 @@ struct Message {
     enum MessageType {
         case justText(String)
         case image(fileId: String, caption: String?)
+        case document(fileId: String, fileName: String?, caption: String?)
     }
 
     // MARK: Properties

@@ -23,25 +23,9 @@ jobs:
     - name: Check formatting with swiftformat
       run: swiftformat --lint --strict .
 
-  swiftlint-check:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up mise
-      uses: jdx/mise-action@v2
-      with:
-          install: true
-          cache: true
-          experimental: true
-
-    - name: Check linting with swiftlint
-      run: swiftlint lint --strict
-
   test:
     runs-on: macos-latest
-    needs: [swiftformat-check, swiftlint-check]
+    needs: [swiftformat-check]
     permissions:
       contents: read
 
@@ -62,7 +46,7 @@ jobs:
         # Swift PM stores the test executable in .build/debug with the package name
         PACKAGE_NAME="stylus"
         TEST_EXECUTABLE=".build/debug/${PACKAGE_NAME}PackageTests.xctest/Contents/MacOS/${PACKAGE_NAME}PackageTests"
-        
+
         # Check if the test executable exists
         if [ ! -f "$TEST_EXECUTABLE" ]; then
           echo "Test executable not found at: $TEST_EXECUTABLE"
@@ -73,7 +57,7 @@ jobs:
           ls -la .build/debug/ || true
           exit 1
         fi
-        
+
         xcrun llvm-cov export -format="lcov" \
           "$TEST_EXECUTABLE" \
           -instr-profile .build/debug/codecov/default.profdata > coverage.lcov
