@@ -21,3 +21,10 @@
 - Use @testable import for accessing internal APIs in tests
 - Prefer parameterized tests with @Test(arguments:) for multiple test cases
 
+# GitHub CLI Task Tracking
+- List issues: `gh issue list`
+- Create issue: `gh issue create --title "Title" --body "Description"`
+- View issue: `gh issue view <number>`
+- Close issue: `gh issue close <number>`
+- Create PR: `gh pr create --title "Title" --body "Description"`
+- List PRs: `gh pr list`
