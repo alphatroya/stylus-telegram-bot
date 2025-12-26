@@ -193,7 +193,7 @@ struct App {
         bot.respondAsSaved(on: message)
     }
 
-    private func handleMessageType(_ messageType: MessageType, timeString: String, filePath: String) async {
+    private func handleMessageType(_ messageType: Message.MessageType, timeString: String, filePath: String) async {
         switch messageType {
         case let .justText(text):
             do {
