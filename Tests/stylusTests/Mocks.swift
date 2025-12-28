@@ -103,13 +103,16 @@ final class MockBot: Bot, @unchecked Sendable {
     var loadFileResult: (data: Data, filePath: String)?
     var loadFileError: Error?
     var respondAsSavedCallCount = 0
+    var fetchPendingMessagesResult: (messages: [Message], nextOffset: Int64?)?
+    var fetchPendingMessagesError: Error?
 
     // MARK: Functions
 
-    func launch() -> AsyncThrowingStream<Message, Error> {
-        AsyncThrowingStream { continuation in
-            continuation.finish()
+    func fetchPendingMessages(startingOffset: Int64?) async throws -> (messages: [Message], nextOffset: Int64?) {
+        if let error = fetchPendingMessagesError {
+            throw error
         }
+        return fetchPendingMessagesResult ?? (messages: [], nextOffset: startingOffset)
     }
 
     func respondAsSaved(on _: Message) {
@@ -133,6 +136,8 @@ final class MockBot: Bot, @unchecked Sendable {
         loadFileResult = nil
         loadFileError = nil
         respondAsSavedCallCount = 0
+        fetchPendingMessagesResult = nil
+        fetchPendingMessagesError = nil
     }
 }
 

@@ -1,5 +1,6 @@
 import Foundation
 @preconcurrency import TelegramBotSDK
+import CCurl
 
 // MARK: - TelegramConfig
 
@@ -35,12 +36,70 @@ final class TelegramBot: Bot, @unchecked Sendable {
 
     // MARK: Functions
 
-    func launch() -> AsyncThrowingStream<Message, Swift.Error> {
-        AsyncThrowingStream { continuation in
-            DispatchQueue.global().async {
-                self.processUpdates(continuation: continuation)
+    /// Fetches all pending messages from Telegram using pagination.
+    /// Returns when there are no more pending messages.
+    ///
+    /// - Parameter startingOffset: The offset to start fetching from. If nil, starts from the beginning.
+    /// - Returns: A tuple containing all fetched messages and the next offset to use for subsequent calls.
+    func fetchPendingMessages(startingOffset: Int64?) async throws -> (messages: [Message], nextOffset: Int64?) {
+        var allMessages: [Message] = []
+        var currentOffset = startingOffset
+        var retryCount = 0
+        
+        while true {
+            // Use timeout=0 for immediate return (no long polling)
+            let updates = bot.getUpdatesSync(offset: currentOffset, limit: 100, timeout: 0)
+            
+            // Handle errors with retry logic
+            if updates == nil {
+                if let error = bot.lastError {
+                    // Check if this is a temporary error we should retry
+                    if case .libcurlError(let code, _) = error {
+                        switch code {
+                        case CURLE_COULDNT_RESOLVE_PROXY, CURLE_COULDNT_RESOLVE_HOST, 
+                             CURLE_COULDNT_CONNECT, CURLE_OPERATION_TIMEDOUT, 
+                             CURLE_SSL_CONNECT_ERROR, CURLE_SEND_ERROR, CURLE_RECV_ERROR:
+                            retryCount += 1
+                            if retryCount <= 3 {
+                                let delay = min(Double(retryCount), 5.0)
+                                print("Temporary network error, retrying in \(delay)s... (attempt \(retryCount)/3)")
+                                Thread.sleep(forTimeInterval: delay)
+                                continue
+                            }
+                        default:
+                            break
+                        }
+                    }
+                    throw Error.dataTaskError(error)
+                }
+                throw Error.unknownError
+            }
+            
+            guard let updates, !updates.isEmpty else {
+                // No more updates available
+                break
+            }
+            
+            // Reset retry count on successful fetch
+            retryCount = 0
+            
+            // Process all updates in this batch
+            for update in updates {
+                if let message = update.message, let from = message.from {
+                    if let convertedMessage = convertMessage(message, from: from) {
+                        allMessages.append(convertedMessage)
+                    }
+                }
+                
+                // Update offset to skip this update in next fetch
+                let nextUpdateId = update.updateId + 1
+                if currentOffset == nil || nextUpdateId > currentOffset! {
+                    currentOffset = nextUpdateId
+                }
             }
         }
+        
+        return (messages: allMessages, nextOffset: currentOffset)
     }
 
     func respondAsSaved(on message: Message) {
@@ -74,97 +133,38 @@ final class TelegramBot: Bot, @unchecked Sendable {
         return (data: data, filePath: filePath)
     }
 
-    private func processUpdates(continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation) {
-        while let update = bot.nextUpdateSync() {
-            guard let message = update.message, let from = message.from else {
-                print("Skipping update - missing message or sender information")
-                continue
-            }
-
-            processMessage(message, from: from, continuation: continuation)
-        }
-        finishProcessing(continuation: continuation)
-    }
-
-    private func processMessage(
+    private func convertMessage(
         _ message: TelegramBotSDK.Message,
-        from: TelegramBotSDK.User,
-        continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
-    ) {
+        from: TelegramBotSDK.User
+    ) -> Message? {
+        var messageType: Message.MessageType?
+
         if let document = message.document {
-            handleDocumentMessage(message, from: from, document: document, continuation: continuation)
+            messageType = .document(
+                fileId: document.fileId,
+                fileName: document.fileName,
+                caption: message.caption
+            )
+        } else if let photo = message.photo, let bestQualityPhoto = bestQualityPhotos(from: photo) {
+            messageType = .image(
+                fileId: bestQualityPhoto,
+                caption: message.caption
+            )
+        } else if let text = message.text {
+            messageType = .justText(text)
         }
 
-        if let photo = message.photo, let bestQualityPhoto = bestQualityPhotos(from: photo) {
-            handlePhotoMessage(message, from: from, fileId: bestQualityPhoto, continuation: continuation)
+        guard let messageType else {
+            print("Skipping message - no supported content type")
+            return nil
         }
 
-        if let text = message.text {
-            handleTextMessage(message, from: from, text: text, continuation: continuation)
-        }
-    }
-
-    private func handleDocumentMessage(
-        _ message: TelegramBotSDK.Message,
-        from: TelegramBotSDK.User,
-        document: TelegramBotSDK.Document,
-        continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
-    ) {
-        continuation.yield(
-            Message(
-                id: message.messageId,
-                from: .init(id: from.id, name: from.username),
-                date: message.date,
-                messageType: .document(
-                    fileId: document.fileId,
-                    fileName: document.fileName,
-                    caption: message.caption,
-                ),
-            ),
+        return Message(
+            id: message.messageId,
+            from: .init(id: from.id, name: from.username),
+            date: message.date,
+            messageType: messageType
         )
-    }
-
-    private func handlePhotoMessage(
-        _ message: TelegramBotSDK.Message,
-        from: TelegramBotSDK.User,
-        fileId: String,
-        continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
-    ) {
-        continuation.yield(
-            Message(
-                id: message.messageId,
-                from: .init(id: from.id, name: from.username),
-                date: message.date,
-                messageType: .image(
-                    fileId: fileId,
-                    caption: message.caption,
-                ),
-            ),
-        )
-    }
-
-    private func handleTextMessage(
-        _ message: TelegramBotSDK.Message,
-        from: TelegramBotSDK.User,
-        text: String,
-        continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
-    ) {
-        continuation.yield(
-            Message(
-                id: message.messageId,
-                from: .init(id: from.id, name: from.username),
-                date: message.date,
-                messageType: .justText(text),
-            ),
-        )
-    }
-
-    private func finishProcessing(continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation) {
-        if let error = bot.lastError {
-            continuation.finish(throwing: Error.dataTaskError(error))
-        } else {
-            continuation.finish()
-        }
     }
 
     private func bestQualityPhotos(from photos: [PhotoSize]) -> String? {

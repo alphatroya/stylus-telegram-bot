@@ -31,7 +31,7 @@ struct Message {
 protocol Bot {
     typealias File = Data
 
-    func launch() -> AsyncThrowingStream<Message, Error>
+    func fetchPendingMessages(startingOffset: Int64?) async throws -> (messages: [Message], nextOffset: Int64?)
     func respondAsSaved(on message: Message)
     func loadFile(with: String) async throws -> (data: File, filePath: String)
 }

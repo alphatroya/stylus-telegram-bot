@@ -32,6 +32,7 @@ struct App {
     var linkProcessor: LinkProcessor = .init()
     var dateFormatter: StylusDateFormatter = .init()
     var bot: Bot
+    var offsetManager: OffsetManager = .init()
 
     // MARK: Functions
 
@@ -167,14 +168,48 @@ struct App {
     }
 
     func run() async throws {
+        print("Stylus bot starting...")
+        
         let journalsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("journals")
         try await journalWriter.ensureDirectoryExists(at: journalsURL.path)
-        let sequence = bot.launch()
-
-        for try await message in sequence {
-            try await processMessage(message, journalsURL: journalsURL)
+        
+        // Read last processed offset
+        let startingOffset = offsetManager.readOffset()
+        if let offset = startingOffset {
+            print("Resuming from offset: \(offset)")
+        } else {
+            print("No previous offset found, starting fresh")
         }
-        fatalError("Bot stream terminated unexpectedly. The bot should run continuously unless explicitly stopped.")
+        
+        // Fetch all pending messages
+        let (messages, nextOffset) = try await bot.fetchPendingMessages(startingOffset: startingOffset)
+        
+        print("Fetched \(messages.count) pending message(s)")
+        
+        // Process each message
+        var processedCount = 0
+        for message in messages {
+            do {
+                try await processMessage(message, journalsURL: journalsURL)
+                processedCount += 1
+            } catch {
+                print("Error processing message \(message.id): \(error)")
+                // Continue processing other messages even if one fails
+            }
+        }
+        
+        // Save the new offset if we processed any updates
+        if let nextOffset {
+            do {
+                try offsetManager.writeOffset(nextOffset)
+                print("Saved offset: \(nextOffset)")
+            } catch {
+                print("Warning: Failed to save offset: \(error)")
+            }
+        }
+        
+        print("Processing complete. Processed \(processedCount)/\(messages.count) message(s)")
+        print("Stylus bot finished successfully")
     }
 
     private func processMessage(_ message: Message, journalsURL: URL) async throws {
