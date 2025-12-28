@@ -36,15 +36,30 @@ struct App {
     // MARK: Functions
 
     /// Internal for reuse and testing from the test target.
-    func handleJustTextMessage(text: String, timeString: String, filePath: String) async throws {
+    func handleJustTextMessage(text: String, timeString: String, filePath: String, originalSender: Message.From? = nil) async throws {
         let processedText = await linkProcessor.processLinks(in: text)
-        let taggedText = addStylusInboxTag(to: processedText)
+        var taggedText = processedText
+
+        // Add user tag if there's an original sender
+        if let originalSender, let userName = extractUserName(from: originalSender) {
+            taggedText = addUserTag(to: taggedText, userName: userName)
+        }
+
+        // Add stylus-inbox tag
+        taggedText = addStylusInboxTag(to: taggedText)
+
         let lineToAppend = "- TODO **\(timeString)** \(taggedText)\n"
         try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
     }
 
     /// Internal for reuse and testing from the test target.
-    func handleImageMessage(fileId: String, caption: String?, timeString: String, filePath: String) async throws {
+    func handleImageMessage(
+        fileId: String,
+        caption: String?,
+        timeString: String,
+        filePath: String,
+        originalSender: Message.From? = nil,
+    ) async throws {
         let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
         try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
 
@@ -61,11 +76,27 @@ struct App {
 
         let captionText = caption ?? ""
         let processedCaptionText = await linkProcessor.processLinks(in: captionText)
-        let processedCaption = addStylusInboxTag(to: processedCaptionText)
-        let lineToAppend = if captionText.isEmpty {
-            "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(imageMarkdown)\n"
+
+        var processedCaption = processedCaptionText
+
+        // Add user tag if there's an original sender
+        if let originalSender, let userName = extractUserName(from: originalSender) {
+            processedCaption = addUserTag(to: processedCaption, userName: userName)
+        }
+
+        // Add stylus-inbox tag
+        processedCaption = addStylusInboxTag(to: processedCaption)
+
+        let lineToAppend: String
+        if captionText.isEmpty {
+            if let originalSender, let userName = extractUserName(from: originalSender) {
+                let userTag = createUserTag(from: userName)
+                lineToAppend = "- TODO **\(timeString)** \(userTag) #stylus-inbox\ncollapsed:: true\n    - \(imageMarkdown)\n"
+            } else {
+                lineToAppend = "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(imageMarkdown)\n"
+            }
         } else {
-            "- TODO **\(timeString)** \(processedCaption)\ncollapsed:: true\n    - \(imageMarkdown)\n"
+            lineToAppend = "- TODO **\(timeString)** \(processedCaption)\ncollapsed:: true\n    - \(imageMarkdown)\n"
         }
 
         try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
@@ -112,6 +143,7 @@ struct App {
         caption: String?,
         timeString: String,
         filePath: String,
+        originalSender: Message.From? = nil,
     ) async throws {
         let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
         try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
@@ -156,11 +188,27 @@ struct App {
 
         let captionText = caption ?? ""
         let processedCaptionText = await linkProcessor.processLinks(in: captionText)
-        let processedCaption = addStylusInboxTag(to: processedCaptionText)
-        let lineToAppend = if captionText.isEmpty {
-            "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(documentMarkdown)\n"
+
+        var processedCaption = processedCaptionText
+
+        // Add user tag if there's an original sender
+        if let originalSender, let userName = extractUserName(from: originalSender) {
+            processedCaption = addUserTag(to: processedCaption, userName: userName)
+        }
+
+        // Add stylus-inbox tag
+        processedCaption = addStylusInboxTag(to: processedCaption)
+
+        let lineToAppend: String
+        if captionText.isEmpty {
+            if let originalSender, let userName = extractUserName(from: originalSender) {
+                let userTag = createUserTag(from: userName)
+                lineToAppend = "- TODO **\(timeString)** \(userTag) #stylus-inbox\ncollapsed:: true\n    - \(documentMarkdown)\n"
+            } else {
+                lineToAppend = "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(documentMarkdown)\n"
+            }
         } else {
-            "- TODO **\(timeString)** \(processedCaption)\ncollapsed:: true\n    - \(documentMarkdown)\n"
+            lineToAppend = "- TODO **\(timeString)** \(processedCaption)\ncollapsed:: true\n    - \(documentMarkdown)\n"
         }
 
         try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
@@ -187,17 +235,22 @@ struct App {
         let filePath = journalsURL.appendingPathComponent("\(messageDateFormatted).md").path
         let timeString = await dateFormatter.formatDate("HH:mm", date: message.date)
 
-        await handleMessageType(message.messageType, timeString: timeString, filePath: filePath)
+        await handleMessageType(message.messageType, timeString: timeString, filePath: filePath, originalSender: message.originalSender)
 
         print("Successfully added to journal: \(filePath)")
         bot.respondAsSaved(on: message)
     }
 
-    private func handleMessageType(_ messageType: Message.MessageType, timeString: String, filePath: String) async {
+    private func handleMessageType(
+        _ messageType: Message.MessageType,
+        timeString: String,
+        filePath: String,
+        originalSender: Message.From?,
+    ) async {
         switch messageType {
         case let .justText(text):
             do {
-                try await handleJustTextMessage(text: text, timeString: timeString, filePath: filePath)
+                try await handleJustTextMessage(text: text, timeString: timeString, filePath: filePath, originalSender: originalSender)
             } catch {
                 print("Error processing message: \(text), err: \(error)")
             }
@@ -209,6 +262,7 @@ struct App {
                     caption: caption,
                     timeString: timeString,
                     filePath: filePath,
+                    originalSender: originalSender,
                 )
             } catch {
                 print("Error processing image err: \(error)")
@@ -222,6 +276,7 @@ struct App {
                     caption: caption,
                     timeString: timeString,
                     filePath: filePath,
+                    originalSender: originalSender,
                 )
             } catch {
                 print("Error processing document err: \(error)")

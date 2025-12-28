@@ -1,5 +1,7 @@
 import Foundation
-@preconcurrency import LinkPresentation
+#if canImport(LinkPresentation)
+    @preconcurrency import LinkPresentation
+#endif
 @testable import stylus
 import Testing
 
