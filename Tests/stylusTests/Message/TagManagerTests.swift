@@ -87,4 +87,11 @@ struct TagManagerTests {
         let result = extractUserName(from: from)
         #expect(result == "Alice")
     }
+
+    @Test
+    func extractUserNameTrimsWhitespace() {
+        let from = Message.From(id: 123, name: nil, firstName: "  John  ", lastName: "  Doe  ")
+        let result = extractUserName(from: from)
+        #expect(result == "John Doe")
+    }
 }

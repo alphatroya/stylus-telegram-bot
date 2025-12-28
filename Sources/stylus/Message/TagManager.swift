@@ -23,14 +23,14 @@ func extractUserName(from sender: Message.From) -> String? {
     }
 
     // Priority 2: first_name + last_name
-    if let firstName = sender.firstName, !firstName.isEmpty,
-       let lastName = sender.lastName, !lastName.isEmpty
+    if let firstName = sender.firstName?.trimmingCharacters(in: .whitespaces), !firstName.isEmpty,
+       let lastName = sender.lastName?.trimmingCharacters(in: .whitespaces), !lastName.isEmpty
     {
         return "\(firstName) \(lastName)"
     }
 
     // Priority 3: first_name only
-    if let firstName = sender.firstName, !firstName.isEmpty {
+    if let firstName = sender.firstName?.trimmingCharacters(in: .whitespaces), !firstName.isEmpty {
         return firstName
     }
 

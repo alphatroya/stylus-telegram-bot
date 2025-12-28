@@ -79,25 +79,22 @@ struct App {
 
         var processedCaption = processedCaptionText
 
-        // Add user tag if there's an original sender
-        if let originalSender, let userName = extractUserName(from: originalSender) {
+        // Add user tag if there's an original sender and caption exists
+        if !captionText.isEmpty, let originalSender, let userName = extractUserName(from: originalSender) {
             processedCaption = addUserTag(to: processedCaption, userName: userName)
         }
 
-        // Add stylus-inbox tag
-        processedCaption = addStylusInboxTag(to: processedCaption)
-
-        let lineToAppend: String
-        if captionText.isEmpty {
-            if let originalSender, let userName = extractUserName(from: originalSender) {
-                let userTag = createUserTag(from: userName)
-                lineToAppend = "- TODO **\(timeString)** \(userTag) #stylus-inbox\ncollapsed:: true\n    - \(imageMarkdown)\n"
-            } else {
-                lineToAppend = "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(imageMarkdown)\n"
-            }
-        } else {
-            lineToAppend = "- TODO **\(timeString)** \(processedCaption)\ncollapsed:: true\n    - \(imageMarkdown)\n"
+        // Add stylus-inbox tag if caption exists
+        if !captionText.isEmpty {
+            processedCaption = addStylusInboxTag(to: processedCaption)
         }
+
+        let lineToAppend = formatMediaEntry(
+            timeString: timeString,
+            caption: captionText.isEmpty ? "" : processedCaption,
+            mediaMarkdown: imageMarkdown,
+            originalSender: originalSender,
+        )
 
         try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
     }
@@ -191,25 +188,22 @@ struct App {
 
         var processedCaption = processedCaptionText
 
-        // Add user tag if there's an original sender
-        if let originalSender, let userName = extractUserName(from: originalSender) {
+        // Add user tag if there's an original sender and caption exists
+        if !captionText.isEmpty, let originalSender, let userName = extractUserName(from: originalSender) {
             processedCaption = addUserTag(to: processedCaption, userName: userName)
         }
 
-        // Add stylus-inbox tag
-        processedCaption = addStylusInboxTag(to: processedCaption)
-
-        let lineToAppend: String
-        if captionText.isEmpty {
-            if let originalSender, let userName = extractUserName(from: originalSender) {
-                let userTag = createUserTag(from: userName)
-                lineToAppend = "- TODO **\(timeString)** \(userTag) #stylus-inbox\ncollapsed:: true\n    - \(documentMarkdown)\n"
-            } else {
-                lineToAppend = "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(documentMarkdown)\n"
-            }
-        } else {
-            lineToAppend = "- TODO **\(timeString)** \(processedCaption)\ncollapsed:: true\n    - \(documentMarkdown)\n"
+        // Add stylus-inbox tag if caption exists
+        if !captionText.isEmpty {
+            processedCaption = addStylusInboxTag(to: processedCaption)
         }
+
+        let lineToAppend = formatMediaEntry(
+            timeString: timeString,
+            caption: captionText.isEmpty ? "" : processedCaption,
+            mediaMarkdown: documentMarkdown,
+            originalSender: originalSender,
+        )
 
         try await journalWriter.appendToJournalFile(at: filePath, content: lineToAppend)
     }
@@ -223,6 +217,25 @@ struct App {
             try await processMessage(message, journalsURL: journalsURL)
         }
         fatalError("Bot stream terminated unexpectedly. The bot should run continuously unless explicitly stopped.")
+    }
+
+    /// Helper method to format media entry with optional caption and user tag
+    private func formatMediaEntry(
+        timeString: String,
+        caption: String,
+        mediaMarkdown: String,
+        originalSender: Message.From?,
+    ) -> String {
+        if caption.isEmpty {
+            if let originalSender, let userName = extractUserName(from: originalSender) {
+                let userTag = createUserTag(from: userName)
+                return "- TODO **\(timeString)** \(userTag) #stylus-inbox\ncollapsed:: true\n    - \(mediaMarkdown)\n"
+            } else {
+                return "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(mediaMarkdown)\n"
+            }
+        } else {
+            return "- TODO **\(timeString)** \(caption)\ncollapsed:: true\n    - \(mediaMarkdown)\n"
+        }
     }
 
     private func processMessage(_ message: Message, journalsURL: URL) async throws {
