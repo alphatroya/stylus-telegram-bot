@@ -30,6 +30,7 @@ struct TestContext {
             linkProcessor: LinkProcessor(),
             dateFormatter: StylusDateFormatter(),
             bot: mockBot,
+            offsetManager: OffsetManager(fileWorker: mockFileWorker),
         )
     }
 }
@@ -740,6 +741,115 @@ struct AppTests {
         #expect(context.mockFileWorker.fileSystem[maliciousPath] == nil)
     }
 
+    @Test func runProcessesAllMessagesAndExitsCleanly() async throws {
+        let context = TestContext()
+
+        // Setup mock messages
+        let message1 = Message(
+            id: 1,
+            from: .init(id: 123, name: "testuser"),
+            date: Date(),
+            messageType: .justText("First message"),
+        )
+        let message2 = Message(
+            id: 2,
+            from: .init(id: 123, name: "testuser"),
+            date: Date(),
+            messageType: .justText("Second message"),
+        )
+
+        context.mockBot.fetchPendingMessagesResult = (
+            messages: [message1, message2],
+            nextOffset: 3,
+        )
+
+        // Run the bot
+        try await context.app.run()
+
+        // Verify all messages were processed
+        #expect(context.mockBot.respondAsSavedCallCount == 2)
+
+        // Verify offset was saved
+        let offsetPath = getOffsetPath(fileWorker: context.mockFileWorker)
+        let savedOffset = context.mockFileWorker.fileSystem[offsetPath]
+        #expect(savedOffset == "3\n")
+    }
+
+    @Test func runHandlesNoMessagesGracefully() async throws {
+        let context = TestContext()
+
+        // Setup empty message list
+        context.mockBot.fetchPendingMessagesResult = (messages: [], nextOffset: nil)
+
+        // Run should complete without error
+        try await context.app.run()
+
+        // Verify no messages were processed
+        #expect(context.mockBot.respondAsSavedCallCount == 0)
+    }
+
+    @Test func runContinuesProcessingAfterIndividualMessageFailure() async throws {
+        let context = TestContext()
+
+        // Setup messages where one will fail (wrong user ID)
+        let message1 = Message(
+            id: 1,
+            from: .init(id: 999, name: "wronguser"), // Wrong user ID
+            date: Date(),
+            messageType: .justText("Message from wrong user"),
+        )
+        let message2 = Message(
+            id: 2,
+            from: .init(id: 123, name: "testuser"), // Correct user ID
+            date: Date(),
+            messageType: .justText("Valid message"),
+        )
+
+        context.mockBot.fetchPendingMessagesResult = (
+            messages: [message1, message2],
+            nextOffset: 3,
+        )
+
+        // Run should complete despite first message being from wrong user
+        try await context.app.run()
+
+        // Verify only the valid message was processed
+        #expect(context.mockBot.respondAsSavedCallCount == 1)
+
+        // Verify offset was still saved
+        let offsetPath = getOffsetPath(fileWorker: context.mockFileWorker)
+        let savedOffset = context.mockFileWorker.fileSystem[offsetPath]
+        #expect(savedOffset == "3\n")
+    }
+
+    @Test func runResumesFromSavedOffset() async throws {
+        let context = TestContext()
+
+        // Setup saved offset
+        let offsetPath = getOffsetPath(fileWorker: context.mockFileWorker)
+        context.mockFileWorker.fileSystem[offsetPath] = "100\n"
+
+        // Setup mock to return messages starting from offset 100
+        let message = Message(
+            id: 101,
+            from: .init(id: 123, name: "testuser"),
+            date: Date(),
+            messageType: .justText("New message"),
+        )
+
+        context.mockBot.fetchPendingMessagesResult = (
+            messages: [message],
+            nextOffset: 102,
+        )
+
+        // Run the bot
+        try await context.app.run()
+
+        // Verify new offset was saved
+        let savedOffset = context.mockFileWorker.fileSystem[offsetPath]
+        #expect(savedOffset == "102\n")
+    }
+
     // MARK: - Helpers
 
     private func makeTestConfig() -> Config {
@@ -748,5 +858,12 @@ struct AppTests {
             telegramUserID: 123,
             knowledgeBaseLocation: "/test/kb",
         )
+    }
+
+    private func getOffsetPath(fileWorker: MockFileWorker) -> String {
+        let configPath = ConfigPath.path
+        let configURL = URL(fileURLWithPath: configPath)
+        let configDirectory = configURL.deletingLastPathComponent()
+        return configDirectory.appendingPathComponent("offset.txt").path
     }
 }
