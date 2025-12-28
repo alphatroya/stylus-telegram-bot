@@ -193,8 +193,13 @@ struct App {
                 try await processMessage(message, journalsURL: journalsURL)
                 processedCount += 1
             } catch {
+                // Continue processing other messages even if one fails.
+                // This ensures that a single problematic message doesn't block
+                // the entire batch. Common recoverable errors include:
+                // - Network issues when downloading files
+                // - File system errors when writing
+                // - Invalid message formats
                 print("Error processing message \(message.id): \(error)")
-                // Continue processing other messages even if one fails
             }
         }
         

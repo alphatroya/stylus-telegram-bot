@@ -23,6 +23,12 @@ final class TelegramBot: Bot, @unchecked Sendable {
 
     let bot: TelegramBotSDK.TelegramBot
 
+    // MARK: Constants
+
+    private static let batchSize = 100
+    private static let maxRetries = 3
+    private static let maxRetryDelay = 5.0
+
     // MARK: Lifecycle
 
     init(config: TelegramConfig) {
@@ -48,7 +54,7 @@ final class TelegramBot: Bot, @unchecked Sendable {
         
         while true {
             // Use timeout=0 for immediate return (no long polling)
-            let updates = bot.getUpdatesSync(offset: currentOffset, limit: 100, timeout: 0)
+            let updates = bot.getUpdatesSync(offset: currentOffset, limit: Self.batchSize, timeout: 0)
             
             // Handle errors with retry logic
             if updates == nil {
@@ -60,10 +66,10 @@ final class TelegramBot: Bot, @unchecked Sendable {
                              CURLE_COULDNT_CONNECT, CURLE_OPERATION_TIMEDOUT, 
                              CURLE_SSL_CONNECT_ERROR, CURLE_SEND_ERROR, CURLE_RECV_ERROR:
                             retryCount += 1
-                            if retryCount <= 3 {
-                                let delay = min(Double(retryCount), 5.0)
-                                print("Temporary network error, retrying in \(delay)s... (attempt \(retryCount)/3)")
-                                Thread.sleep(forTimeInterval: delay)
+                            if retryCount <= Self.maxRetries {
+                                let delay = min(Double(retryCount), Self.maxRetryDelay)
+                                print("Temporary network error, retrying in \(delay)s... (attempt \(retryCount)/\(Self.maxRetries))")
+                                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                                 continue
                             }
                         default:
