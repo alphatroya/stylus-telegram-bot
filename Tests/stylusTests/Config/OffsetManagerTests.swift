@@ -86,13 +86,4 @@ struct OffsetManagerTests {
         #expect(content == "222\n")
         #expect(fileWorker.writeStringToFileCallCount == 2)
     }
-
-    // MARK: Helper Methods
-
-    private func getOffsetPath(fileWorker: MockFileWorker) -> String {
-        let configPath = ConfigPath.path
-        let configURL = URL(fileURLWithPath: configPath)
-        let configDirectory = configURL.deletingLastPathComponent()
-        return configDirectory.appendingPathComponent("offset.txt").path
-    }
 }

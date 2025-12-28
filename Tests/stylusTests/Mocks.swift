@@ -158,3 +158,13 @@ actor MockLinkProcessor {
         processLinksResult ?? text
     }
 }
+
+// MARK: - Test Utilities
+
+/// Returns the path to the offset file for testing purposes.
+func getOffsetPath(fileWorker: MockFileWorker) -> String {
+    let configPath = ConfigPath.path
+    let configURL = URL(fileURLWithPath: configPath)
+    let configDirectory = configURL.deletingLastPathComponent()
+    return configDirectory.appendingPathComponent("offset.txt").path
+}

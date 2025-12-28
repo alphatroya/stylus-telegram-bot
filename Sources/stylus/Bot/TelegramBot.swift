@@ -27,7 +27,7 @@ final class TelegramBot: Bot, @unchecked Sendable {
 
     private static let batchSize = 100
     private static let maxRetries = 3
-    private static let maxRetryDelay = 5.0
+    private static let baseRetryDelay = 1.0
 
     // MARK: Lifecycle
 
@@ -67,7 +67,7 @@ final class TelegramBot: Bot, @unchecked Sendable {
                              CURLE_SSL_CONNECT_ERROR, CURLE_SEND_ERROR, CURLE_RECV_ERROR:
                             retryCount += 1
                             if retryCount <= Self.maxRetries {
-                                let delay = min(Double(retryCount), Self.maxRetryDelay)
+                                let delay = Self.baseRetryDelay * Double(retryCount)
                                 print("Temporary network error, retrying in \(delay)s... (attempt \(retryCount)/\(Self.maxRetries))")
                                 try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                                 continue
@@ -99,7 +99,9 @@ final class TelegramBot: Bot, @unchecked Sendable {
                 
                 // Update offset to skip this update in next fetch
                 let nextUpdateId = update.updateId + 1
-                if currentOffset == nil || nextUpdateId > currentOffset! {
+                if let current = currentOffset {
+                    currentOffset = max(current, nextUpdateId)
+                } else {
                     currentOffset = nextUpdateId
                 }
             }

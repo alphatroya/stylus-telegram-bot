@@ -859,11 +859,4 @@ struct AppTests {
             knowledgeBaseLocation: "/test/kb",
         )
     }
-
-    private func getOffsetPath(fileWorker: MockFileWorker) -> String {
-        let configPath = ConfigPath.path
-        let configURL = URL(fileURLWithPath: configPath)
-        let configDirectory = configURL.deletingLastPathComponent()
-        return configDirectory.appendingPathComponent("offset.txt").path
-    }
 }
