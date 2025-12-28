@@ -81,7 +81,8 @@ final class TelegramBot: Bot, @unchecked Sendable {
                 throw Error.unknownError
             }
             
-            guard let updates, !updates.isEmpty else {
+            // If we get here, updates is not nil but could be empty
+            guard !updates.isEmpty else {
                 // No more updates available
                 break
             }
