@@ -166,19 +166,6 @@ struct OffsetManagerTests {
         #expect(readOffset == largeOffset)
     }
 
-    // MARK: Configuration Directory Tests
-
-    @Test("Uses ConfigPath when no directory specified")
-    func usesConfigPath() {
-        // This test verifies the default behavior uses ConfigPath
-        // We can't easily test the actual path resolution without mocking,
-        // but we can verify the manager is created successfully without throwing
-        _ = OffsetManager()
-
-        // If we reach here, initialization was successful
-        #expect(true)
-    }
-
     // MARK: Test Helpers
 
     private func createTempDirectory() throws -> URL {
