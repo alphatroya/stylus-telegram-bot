@@ -29,6 +29,7 @@ struct Message {
     // MARK: Properties
 
     var id: MessageID
+    var updateId: Int64 // Telegram update ID for offset management
     var from: From
     var date: Date
     var messageType: MessageType
@@ -41,7 +42,7 @@ struct Message {
 protocol Bot {
     typealias File = Data
 
-    func launch() -> AsyncThrowingStream<Message, Error>
+    func fetchAllMessages(startingOffset: Int64?) async throws -> (messages: [Message], nextOffset: Int64?)
     func respondAsSaved(on message: Message)
     func loadFile(with: String) async throws -> (data: File, filePath: String)
 }

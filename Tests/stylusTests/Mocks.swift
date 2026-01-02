@@ -104,12 +104,19 @@ final class MockBot: Bot, @unchecked Sendable {
     var loadFileError: Error?
     var respondAsSavedCallCount = 0
 
+    // New properties for batch processing
+    var fetchAllMessagesCallCount = 0
+    var fetchAllMessagesResult: (messages: [Message], nextOffset: Int64?)?
+    var fetchAllMessagesError: Error?
+
     // MARK: Functions
 
-    func launch() -> AsyncThrowingStream<Message, Error> {
-        AsyncThrowingStream { continuation in
-            continuation.finish()
+    func fetchAllMessages(startingOffset _: Int64?) async throws -> (messages: [Message], nextOffset: Int64?) {
+        fetchAllMessagesCallCount += 1
+        if let error = fetchAllMessagesError {
+            throw error
         }
+        return fetchAllMessagesResult ?? (messages: [], nextOffset: nil)
     }
 
     func respondAsSaved(on _: Message) {
@@ -133,6 +140,9 @@ final class MockBot: Bot, @unchecked Sendable {
         loadFileResult = nil
         loadFileError = nil
         respondAsSavedCallCount = 0
+        fetchAllMessagesCallCount = 0
+        fetchAllMessagesResult = nil
+        fetchAllMessagesError = nil
     }
 }
 

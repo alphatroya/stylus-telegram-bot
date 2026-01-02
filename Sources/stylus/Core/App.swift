@@ -32,11 +32,14 @@ struct App {
     var linkProcessor: LinkProcessor = .init()
     var dateFormatter: StylusDateFormatter = .init()
     var bot: Bot
+    var offsetManager: OffsetManager = .init()
 
     // MARK: Functions
 
     /// Internal for reuse and testing from the test target.
-    func handleJustTextMessage(text: String, timeString: String, filePath: String, originalSender: Message.From? = nil) async throws {
+    func handleJustTextMessage(
+        text: String, timeString: String, filePath: String, originalSender: Message.From? = nil,
+    ) async throws {
         let processedText = await linkProcessor.processLinks(in: text)
         var taggedText = processedText
 
@@ -60,7 +63,8 @@ struct App {
         filePath: String,
         originalSender: Message.From? = nil,
     ) async throws {
-        let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
+        let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent(
+            "assets")
         try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
 
         let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
@@ -80,7 +84,9 @@ struct App {
         var processedCaption = processedCaptionText
 
         // Add user tag if there's an original sender and caption exists
-        if !captionText.isEmpty, let originalSender, let userName = extractUserName(from: originalSender) {
+        if !captionText.isEmpty, let originalSender,
+           let userName = extractUserName(from: originalSender)
+        {
             processedCaption = addUserTag(to: processedCaption, userName: userName)
         }
 
@@ -100,7 +106,9 @@ struct App {
     }
 
     /// Internal for reuse and testing from the test target.
-    func saveFileWithUniqueFilename(data: Data, baseFileName: String, assetsURL: URL) async throws -> String {
+    func saveFileWithUniqueFilename(data: Data, baseFileName: String, assetsURL: URL) async throws
+        -> String
+    {
         var fileName = baseFileName
         var assetFilePath = assetsURL.appendingPathComponent(fileName).path
         var retryCount = 0
@@ -116,11 +124,12 @@ struct App {
                 let nameWithoutExtension = fileURL.deletingPathExtension().lastPathComponent
                 let fileExtension = fileURL.pathExtension
 
-                fileName = if fileExtension.isEmpty {
-                    "\(nameWithoutExtension)_\(randomSuffix)"
-                } else {
-                    "\(nameWithoutExtension)_\(randomSuffix).\(fileExtension)"
-                }
+                fileName =
+                    if fileExtension.isEmpty {
+                        "\(nameWithoutExtension)_\(randomSuffix)"
+                    } else {
+                        "\(nameWithoutExtension)_\(randomSuffix).\(fileExtension)"
+                    }
 
                 assetFilePath = assetsURL.appendingPathComponent(fileName).path
                 retryCount += 1
@@ -130,7 +139,9 @@ struct App {
             }
         }
 
-        throw FileNameGenerationError.maxRetriesExceeded(fileName: baseFileName, attempts: Self.maxFileNameRetries)
+        throw FileNameGenerationError.maxRetriesExceeded(
+            fileName: baseFileName, attempts: Self.maxFileNameRetries,
+        )
     }
 
     /// Internal for reuse and testing from the test target.
@@ -142,7 +153,8 @@ struct App {
         filePath: String,
         originalSender: Message.From? = nil,
     ) async throws {
-        let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("assets")
+        let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent(
+            "assets")
         try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
 
         let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
@@ -162,13 +174,14 @@ struct App {
             preferredFileName = ""
         }
 
-        let baseFileName = if !preferredFileName.isEmpty {
-            preferredFileName
-        } else if !fileExtension.isEmpty {
-            "\(fileId).\(fileExtension)"
-        } else {
-            fileId
-        }
+        let baseFileName =
+            if !preferredFileName.isEmpty {
+                preferredFileName
+            } else if !fileExtension.isEmpty {
+                "\(fileId).\(fileExtension)"
+            } else {
+                fileId
+            }
         let finalFileName = try await saveFileWithUniqueFilename(
             data: fileData,
             baseFileName: baseFileName,
@@ -177,11 +190,12 @@ struct App {
 
         let finalFileExtension = URL(fileURLWithPath: finalFileName).pathExtension.lowercased()
         let isPDF = finalFileExtension == "pdf"
-        let documentMarkdown = if isPDF {
-            "![\(finalFileName)](../assets/\(finalFileName))"
-        } else {
-            "[\(finalFileName)](../assets/\(finalFileName))"
-        }
+        let documentMarkdown =
+            if isPDF {
+                "![\(finalFileName)](../assets/\(finalFileName))"
+            } else {
+                "[\(finalFileName)](../assets/\(finalFileName))"
+            }
 
         let captionText = caption ?? ""
         let processedCaptionText = await linkProcessor.processLinks(in: captionText)
@@ -189,7 +203,9 @@ struct App {
         var processedCaption = processedCaptionText
 
         // Add user tag if there's an original sender and caption exists
-        if !captionText.isEmpty, let originalSender, let userName = extractUserName(from: originalSender) {
+        if !captionText.isEmpty, let originalSender,
+           let userName = extractUserName(from: originalSender)
+        {
             processedCaption = addUserTag(to: processedCaption, userName: userName)
         }
 
@@ -209,14 +225,57 @@ struct App {
     }
 
     func run() async throws {
-        let journalsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent("journals")
-        try await journalWriter.ensureDirectoryExists(at: journalsURL.path)
-        let sequence = bot.launch()
+        print("🚀 Starting stylus bot with one-shot execution model")
 
-        for try await message in sequence {
-            try await processMessage(message, journalsURL: journalsURL)
+        let journalsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent(
+            "journals")
+        try await journalWriter.ensureDirectoryExists(at: journalsURL.path)
+
+        // Read offset state
+        let startOffset = offsetManager.readOffsetSafely()
+        if let startOffset {
+            print("📋 Resuming from offset: \(startOffset)")
+        } else {
+            print("📋 Starting fresh (no previous offset found)")
         }
-        fatalError("Bot stream terminated unexpectedly. The bot should run continuously unless explicitly stopped.")
+
+        // Fetch all pending messages
+        let (messages, nextOffset) = try await bot.fetchAllMessages(startingOffset: startOffset)
+        print("📥 Fetched \(messages.count) messages to process")
+
+        if messages.isEmpty {
+            print("✅ No messages to process, exiting cleanly")
+            return
+        }
+
+        // Process each message
+        var processedCount = 0
+
+        for message in messages {
+            do {
+                try await processMessage(message, journalsURL: journalsURL)
+                processedCount += 1
+                print("✅ Processed message \(processedCount)/\(messages.count)")
+            } catch {
+                print("❌ Error processing message \(message.id): \(error.localizedDescription)")
+                // Continue processing other messages
+            }
+        }
+
+        // Update offset after successful processing
+        if let nextOffset {
+            do {
+                try offsetManager.writeOffset(nextOffset)
+                print("💾 Updated offset to: \(nextOffset)")
+            } catch {
+                print("⚠️  Failed to update offset: \(error.localizedDescription)")
+                // This is not fatal - the bot can still continue
+            }
+        }
+
+        print(
+            "🎉 Processing complete! Processed \(processedCount)/\(messages.count) messages successfully",
+        )
     }
 
     /// Helper method to format media entry with optional caption and user tag
@@ -229,9 +288,11 @@ struct App {
         if caption.isEmpty {
             if let originalSender, let userName = extractUserName(from: originalSender) {
                 let userTag = createUserTag(from: userName)
-                return "- TODO **\(timeString)** \(userTag) #stylus-inbox\ncollapsed:: true\n    - \(mediaMarkdown)\n"
+                return
+                    "- TODO **\(timeString)** \(userTag) #stylus-inbox\ncollapsed:: true\n    - \(mediaMarkdown)\n"
             } else {
-                return "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(mediaMarkdown)\n"
+                return
+                    "- TODO **\(timeString)** #stylus-inbox\ncollapsed:: true\n    - \(mediaMarkdown)\n"
             }
         } else {
             return "- TODO **\(timeString)** \(caption)\ncollapsed:: true\n    - \(mediaMarkdown)\n"
@@ -248,7 +309,10 @@ struct App {
         let filePath = journalsURL.appendingPathComponent("\(messageDateFormatted).md").path
         let timeString = await dateFormatter.formatDate("HH:mm", date: message.date)
 
-        await handleMessageType(message.messageType, timeString: timeString, filePath: filePath, originalSender: message.originalSender)
+        await handleMessageType(
+            message.messageType, timeString: timeString, filePath: filePath,
+            originalSender: message.originalSender,
+        )
 
         print("Successfully added to journal: \(filePath)")
         bot.respondAsSaved(on: message)
@@ -263,7 +327,10 @@ struct App {
         switch messageType {
         case let .justText(text):
             do {
-                try await handleJustTextMessage(text: text, timeString: timeString, filePath: filePath, originalSender: originalSender)
+                try await handleJustTextMessage(
+                    text: text, timeString: timeString, filePath: filePath,
+                    originalSender: originalSender,
+                )
             } catch {
                 print("Error processing message: \(text), err: \(error)")
             }
