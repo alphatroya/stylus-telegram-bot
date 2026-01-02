@@ -38,16 +38,56 @@ final class TelegramBot: Bot, @unchecked Sendable {
 
     // MARK: Functions
 
-    func launch() -> AsyncThrowingStream<Message, Swift.Error> {
-        AsyncThrowingStream { continuation in
-            DispatchQueue.global().async {
-                self.processUpdates(continuation: continuation)
+    func fetchAllMessages(startingOffset: Int64?) async throws -> (messages: [Message], nextOffset: Int64?) {
+        var allMessages: [Message] = []
+        var currentOffset = startingOffset
+        let batchLimit = 100 // Telegram API limit
+
+        print("Starting message fetch with offset: \(currentOffset?.description ?? "nil")")
+
+        while true {
+            let updates = bot.getUpdatesSync(
+                offset: currentOffset,
+                limit: batchLimit,
+                timeout: 0, // No timeout - return immediately with available messages
+            )
+
+            // Check for API errors
+            if let error = bot.lastError {
+                throw Error.dataTaskError(error)
+            }
+
+            guard let updates, !updates.isEmpty else {
+                // No more messages available
+                break
+            }
+
+            print("Fetched \(updates.count) updates in this batch")
+
+            // Process each update and convert to Message objects
+            for update in updates {
+                guard let message = update.message, let from = message.from else {
+                    print("Skipping update \(update.updateId) - missing message or sender information")
+                    currentOffset = update.updateId + 1
+                    continue
+                }
+
+                let processedMessage = processMessage(message, from: from, updateId: update.updateId)
+                if let processedMessage {
+                    allMessages.append(processedMessage)
+                }
+
+                // Update offset to next unprocessed message
+                currentOffset = update.updateId + 1
             }
         }
+
+        print("Completed message fetch. Total messages: \(allMessages.count)")
+        return (messages: allMessages, nextOffset: currentOffset)
     }
 
     func respondAsSaved(on message: Message) {
-        bot.sendMessageAsync(
+        bot.sendMessageSync(
             chatId: .chat(message.from.id),
             text: "✅ Saved!",
             replyToMessageId: message.id,
@@ -77,57 +117,47 @@ final class TelegramBot: Bot, @unchecked Sendable {
         return (data: data, filePath: filePath)
     }
 
-    private func processUpdates(continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation) {
-        while let update = bot.nextUpdateSync() {
-            guard let message = update.message, let from = message.from else {
-                print("Skipping update - missing message or sender information")
-                continue
-            }
-
-            processMessage(message, from: from, continuation: continuation)
-        }
-        finishProcessing(continuation: continuation)
-    }
-
     private func processMessage(
         _ message: TelegramBotSDK.Message,
         from: TelegramBotSDK.User,
-        continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
-    ) {
+        updateId: Int64,
+    ) -> Message? {
         let (originalSender, messageContext) = extractOriginalSender(from: message)
 
         if let document = message.document {
-            handleDocumentMessage(
+            return handleDocumentMessage(
                 message,
                 from: from,
                 document: document,
                 originalSender: originalSender,
                 messageContext: messageContext,
-                continuation: continuation,
+                updateId: updateId,
             )
         }
 
         if let photo = message.photo, let bestQualityPhoto = bestQualityPhotos(from: photo) {
-            handlePhotoMessage(
+            return handlePhotoMessage(
                 message,
                 from: from,
                 fileId: bestQualityPhoto,
                 originalSender: originalSender,
                 messageContext: messageContext,
-                continuation: continuation,
+                updateId: updateId,
             )
         }
 
         if let text = message.text {
-            handleTextMessage(
+            return handleTextMessage(
                 message,
                 from: from,
                 text: text,
                 originalSender: originalSender,
                 messageContext: messageContext,
-                continuation: continuation,
+                updateId: updateId,
             )
         }
+
+        return nil
     }
 
     private func extractOriginalSender(from message: TelegramBotSDK.Message) -> (Message.From?, Message.MessageContext) {
@@ -167,21 +197,20 @@ final class TelegramBot: Bot, @unchecked Sendable {
         document: TelegramBotSDK.Document,
         originalSender: Message.From?,
         messageContext: Message.MessageContext,
-        continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
-    ) {
-        continuation.yield(
-            Message(
-                id: message.messageId,
-                from: .init(id: from.id, name: from.username, firstName: from.firstName, lastName: from.lastName),
-                date: message.date,
-                messageType: .document(
-                    fileId: document.fileId,
-                    fileName: document.fileName,
-                    caption: message.caption,
-                ),
-                originalSender: originalSender,
-                messageContext: messageContext,
+        updateId: Int64,
+    ) -> Message {
+        Message(
+            id: message.messageId,
+            updateId: updateId,
+            from: .init(id: from.id, name: from.username, firstName: from.firstName, lastName: from.lastName),
+            date: message.date,
+            messageType: .document(
+                fileId: document.fileId,
+                fileName: document.fileName,
+                caption: message.caption,
             ),
+            originalSender: originalSender,
+            messageContext: messageContext,
         )
     }
 
@@ -191,20 +220,19 @@ final class TelegramBot: Bot, @unchecked Sendable {
         fileId: String,
         originalSender: Message.From?,
         messageContext: Message.MessageContext,
-        continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
-    ) {
-        continuation.yield(
-            Message(
-                id: message.messageId,
-                from: .init(id: from.id, name: from.username, firstName: from.firstName, lastName: from.lastName),
-                date: message.date,
-                messageType: .image(
-                    fileId: fileId,
-                    caption: message.caption,
-                ),
-                originalSender: originalSender,
-                messageContext: messageContext,
+        updateId: Int64,
+    ) -> Message {
+        Message(
+            id: message.messageId,
+            updateId: updateId,
+            from: .init(id: from.id, name: from.username, firstName: from.firstName, lastName: from.lastName),
+            date: message.date,
+            messageType: .image(
+                fileId: fileId,
+                caption: message.caption,
             ),
+            originalSender: originalSender,
+            messageContext: messageContext,
         )
     }
 
@@ -214,26 +242,17 @@ final class TelegramBot: Bot, @unchecked Sendable {
         text: String,
         originalSender: Message.From?,
         messageContext: Message.MessageContext,
-        continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
-    ) {
-        continuation.yield(
-            Message(
-                id: message.messageId,
-                from: .init(id: from.id, name: from.username, firstName: from.firstName, lastName: from.lastName),
-                date: message.date,
-                messageType: .justText(text),
-                originalSender: originalSender,
-                messageContext: messageContext,
-            ),
+        updateId: Int64,
+    ) -> Message {
+        Message(
+            id: message.messageId,
+            updateId: updateId,
+            from: .init(id: from.id, name: from.username, firstName: from.firstName, lastName: from.lastName),
+            date: message.date,
+            messageType: .justText(text),
+            originalSender: originalSender,
+            messageContext: messageContext,
         )
-    }
-
-    private func finishProcessing(continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation) {
-        if let error = bot.lastError {
-            continuation.finish(throwing: Error.dataTaskError(error))
-        } else {
-            continuation.finish()
-        }
     }
 
     private func bestQualityPhotos(from photos: [PhotoSize]) -> String? {
