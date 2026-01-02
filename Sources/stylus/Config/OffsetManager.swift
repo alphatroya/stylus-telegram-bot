@@ -37,19 +37,11 @@ struct OffsetManager {
 
     // MARK: Lifecycle
 
-    init(configDirectory: String? = nil, fileManager: FileManager = .default) {
+    init(configDirectory: String = ConfigPath.path, fileManager: FileManager = .default) {
         self.fileManager = fileManager
-
-        if let configDirectory {
-            offsetFilePath = URL(fileURLWithPath: configDirectory)
-                .appendingPathComponent(Self.offsetFileName)
-                .path
-        } else {
-            // Use the same directory as config file
-            let configPath = ConfigPath.path
-            let configDir = URL(fileURLWithPath: configPath).deletingLastPathComponent()
-            offsetFilePath = configDir.appendingPathComponent(Self.offsetFileName).path
-        }
+        offsetFilePath = URL(fileURLWithPath: configDirectory)
+            .appendingPathComponent(Self.offsetFileName)
+            .path
     }
 
     // MARK: Functions
