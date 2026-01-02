@@ -168,6 +168,72 @@ struct LinkProcessorTests {
         let result = await processor.processLinks(in: input, metadataProvider: { mockProvider })
         #expect(result == "Links: [Long](https://long.com/path) and [Short](https://short.com)")
     }
+
+    // MARK: - Tracking Parameter Tests
+
+    @Test(arguments: [
+        ("https://example.com?utm_source=google&utm_medium=cpc", "https://example.com"),
+        ("https://example.com?utm_campaign=test&param=keep", "https://example.com?param=keep"),
+        ("https://example.com?fbclid=123456789", "https://example.com"),
+        ("https://example.com?gclid=abc123&keep=value", "https://example.com?keep=value"),
+        ("https://example.com?ref_=nb_sb_noss&tag=amazon", "https://example.com"),
+        ("https://example.com?pf_rd_p=123&pf_rd_r=456", "https://example.com"),
+        ("https://example.com?keep1=value1&utm_source=test&keep2=value2", "https://example.com?keep1=value1&keep2=value2"),
+        ("https://example.com", "https://example.com"),
+        ("https://example.com?", "https://example.com"),
+        ("https://example.com?normal_param=value", "https://example.com?normal_param=value"),
+    ])
+    func cleanTrackingParameters(input: String, expected: String) {
+        let processor = LinkProcessor()
+        #expect(processor.cleanTrackingParameters(from: input) == expected)
+    }
+
+    @Test("Extract URLs with tracking parameters removed")
+    func extractURLsWithTrackingRemoved() {
+        let processor = LinkProcessor()
+        let input = "Check out https://example.com?utm_source=google&utm_medium=email&keep=this"
+
+        let urls = processor.extractURLs(from: input)
+        #expect(urls == ["https://example.com?keep=this"])
+    }
+
+    @Test("Process links removes tracking parameters")
+    func processLinksRemovesTracking() async {
+        let mockProvider = MockMetadataProvider()
+        await mockProvider.setMockTitle("Clean Example", for: "https://example.com?keep=this")
+        let processor = LinkProcessor()
+        let input = "Visit https://example.com?utm_source=google&keep=this for info"
+
+        let result = await processor.processLinks(in: input, metadataProvider: { mockProvider })
+        #expect(result == "Visit [Clean Example](https://example.com?keep=this) for info")
+    }
+
+    @Test("Clean tracking preserves URL fragments and paths")
+    func cleanTrackingPreservesFragmentsAndPaths() {
+        let processor = LinkProcessor()
+        let input = "https://example.com/path/to/page?utm_source=test&valid=param#section"
+
+        let result = processor.cleanTrackingParameters(from: input)
+        #expect(result == "https://example.com/path/to/page?valid=param#section")
+    }
+
+    @Test("Clean tracking handles prefix matching")
+    func cleanTrackingHandlesPrefixMatching() {
+        let processor = LinkProcessor()
+        let input = "https://amazon.com?pf_rd_custom=123&pf_rd_another=456&keep=this"
+
+        let result = processor.cleanTrackingParameters(from: input)
+        #expect(result == "https://amazon.com?keep=this")
+    }
+
+    @Test("Clean tracking with malformed URLs returns original")
+    func cleanTrackingMalformedURL() {
+        let processor = LinkProcessor()
+        let input = "not-a-url"
+
+        let result = processor.cleanTrackingParameters(from: input)
+        #expect(result == "not-a-url")
+    }
 }
 
 // MARK: - MockMetadataProvider
