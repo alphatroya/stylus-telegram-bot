@@ -1,5 +1,7 @@
 import Foundation
-import LinkPresentation
+#if canImport(LinkPresentation)
+    import LinkPresentation
+#endif
 import RegexBuilder
 
 // MARK: - LinkProcessor
@@ -121,9 +123,13 @@ struct LinkProcessor {
     func processLinks(
         in text: String,
         metadataProvider: @escaping @Sendable () -> LinkMetadataProviderProtocol = {
-            let provider = LPMetadataProvider()
-            provider.timeout = 5
-            return provider
+            #if canImport(LinkPresentation)
+                let provider = LPMetadataProvider()
+                provider.timeout = 5
+                return provider
+            #else
+                fatalError("LinkPresentation not available on this platform")
+            #endif
         },
     ) async -> String {
         // Extract raw URLs first to preserve original URLs for replacement
@@ -224,9 +230,11 @@ protocol LinkMetadataProviderProtocol: Sendable {
 
 // MARK: - LPMetadataProvider + LinkMetadataProviderProtocol
 
-extension LPMetadataProvider: LinkMetadataProviderProtocol {
-    func fetchMetadata(for url: URL) async throws -> LinkMetadata {
-        let meta = try await startFetchingMetadata(for: url)
-        return .init(title: meta.title, url: meta.url ?? url)
+#if canImport(LinkPresentation)
+    extension LPMetadataProvider: LinkMetadataProviderProtocol {
+        func fetchMetadata(for url: URL) async throws -> LinkMetadata {
+            let meta = try await startFetchingMetadata(for: url)
+            return .init(title: meta.title, url: meta.url ?? url)
+        }
     }
-}
+#endif

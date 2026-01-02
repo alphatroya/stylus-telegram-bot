@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+    import FoundationNetworking
+#endif
 @preconcurrency import TelegramBotSDK
 
 // MARK: - TelegramConfig
@@ -91,35 +94,93 @@ final class TelegramBot: Bot, @unchecked Sendable {
         from: TelegramBotSDK.User,
         continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
     ) {
+        let (originalSender, messageContext) = extractOriginalSender(from: message)
+
         if let document = message.document {
-            handleDocumentMessage(message, from: from, document: document, continuation: continuation)
+            handleDocumentMessage(
+                message,
+                from: from,
+                document: document,
+                originalSender: originalSender,
+                messageContext: messageContext,
+                continuation: continuation,
+            )
         }
 
         if let photo = message.photo, let bestQualityPhoto = bestQualityPhotos(from: photo) {
-            handlePhotoMessage(message, from: from, fileId: bestQualityPhoto, continuation: continuation)
+            handlePhotoMessage(
+                message,
+                from: from,
+                fileId: bestQualityPhoto,
+                originalSender: originalSender,
+                messageContext: messageContext,
+                continuation: continuation,
+            )
         }
 
         if let text = message.text {
-            handleTextMessage(message, from: from, text: text, continuation: continuation)
+            handleTextMessage(
+                message,
+                from: from,
+                text: text,
+                originalSender: originalSender,
+                messageContext: messageContext,
+                continuation: continuation,
+            )
         }
+    }
+
+    private func extractOriginalSender(from message: TelegramBotSDK.Message) -> (Message.From?, Message.MessageContext) {
+        // Priority: reply over forward
+        // Skip reply chains - only handle direct replies (ignore replies to replies)
+        if let replyToMessage = message.replyToMessage,
+           replyToMessage.replyToMessage == nil, // Not a reply chain
+           let originalUser = replyToMessage.from,
+           originalUser.isBot != true // Skip bot messages
+        {
+            let sender = Message.From(
+                id: originalUser.id,
+                name: originalUser.username,
+                firstName: originalUser.firstName,
+                lastName: originalUser.lastName,
+            )
+            return (sender, .reply)
+        }
+
+        // Check for forwarded messages
+        if let forwardFrom = message.forwardFrom {
+            let sender = Message.From(
+                id: forwardFrom.id,
+                name: forwardFrom.username,
+                firstName: forwardFrom.firstName,
+                lastName: forwardFrom.lastName,
+            )
+            return (sender, .forward)
+        }
+
+        return (nil, .original)
     }
 
     private func handleDocumentMessage(
         _ message: TelegramBotSDK.Message,
         from: TelegramBotSDK.User,
         document: TelegramBotSDK.Document,
+        originalSender: Message.From?,
+        messageContext: Message.MessageContext,
         continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
     ) {
         continuation.yield(
             Message(
                 id: message.messageId,
-                from: .init(id: from.id, name: from.username),
+                from: .init(id: from.id, name: from.username, firstName: from.firstName, lastName: from.lastName),
                 date: message.date,
                 messageType: .document(
                     fileId: document.fileId,
                     fileName: document.fileName,
                     caption: message.caption,
                 ),
+                originalSender: originalSender,
+                messageContext: messageContext,
             ),
         )
     }
@@ -128,17 +189,21 @@ final class TelegramBot: Bot, @unchecked Sendable {
         _ message: TelegramBotSDK.Message,
         from: TelegramBotSDK.User,
         fileId: String,
+        originalSender: Message.From?,
+        messageContext: Message.MessageContext,
         continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
     ) {
         continuation.yield(
             Message(
                 id: message.messageId,
-                from: .init(id: from.id, name: from.username),
+                from: .init(id: from.id, name: from.username, firstName: from.firstName, lastName: from.lastName),
                 date: message.date,
                 messageType: .image(
                     fileId: fileId,
                     caption: message.caption,
                 ),
+                originalSender: originalSender,
+                messageContext: messageContext,
             ),
         )
     }
@@ -147,14 +212,18 @@ final class TelegramBot: Bot, @unchecked Sendable {
         _ message: TelegramBotSDK.Message,
         from: TelegramBotSDK.User,
         text: String,
+        originalSender: Message.From?,
+        messageContext: Message.MessageContext,
         continuation: AsyncThrowingStream<Message, Swift.Error>.Continuation,
     ) {
         continuation.yield(
             Message(
                 id: message.messageId,
-                from: .init(id: from.id, name: from.username),
+                from: .init(id: from.id, name: from.username, firstName: from.firstName, lastName: from.lastName),
                 date: message.date,
                 messageType: .justText(text),
+                originalSender: originalSender,
+                messageContext: messageContext,
             ),
         )
     }

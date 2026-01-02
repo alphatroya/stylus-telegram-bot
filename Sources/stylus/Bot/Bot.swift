@@ -8,6 +8,8 @@ struct Message {
     struct From {
         let id: Int64
         let name: String?
+        let firstName: String?
+        let lastName: String?
     }
 
     typealias MessageID = Int
@@ -18,12 +20,20 @@ struct Message {
         case document(fileId: String, fileName: String?, caption: String?)
     }
 
+    enum MessageContext {
+        case original
+        case reply
+        case forward
+    }
+
     // MARK: Properties
 
     var id: MessageID
     var from: From
     var date: Date
     var messageType: MessageType
+    var originalSender: From?
+    var messageContext: MessageContext
 }
 
 // MARK: - Bot

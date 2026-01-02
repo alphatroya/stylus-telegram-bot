@@ -740,6 +740,173 @@ struct AppTests {
         #expect(context.mockFileWorker.fileSystem[maliciousPath] == nil)
     }
 
+    @Test func handleJustTextMessageWithOriginalSenderUsername() async throws {
+        let context = TestContext()
+        let originalSender = Message.From(id: 456, name: "johndoe", firstName: "John", lastName: "Doe")
+
+        let testPath = "/test/journal.md"
+        let timeString = "14:30"
+        let text = "Replied message"
+
+        try await context.app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath, originalSender: originalSender)
+
+        let writtenContent = try #require(context.mockFileWorker.fileSystem[testPath])
+        #expect(writtenContent == "- TODO **14:30** Replied message [[johndoe]] #stylus-inbox\n")
+    }
+
+    @Test func handleJustTextMessageWithOriginalSenderFullName() async throws {
+        let context = TestContext()
+        let originalSender = Message.From(id: 456, name: nil, firstName: "Jane", lastName: "Smith")
+
+        let testPath = "/test/journal.md"
+        let timeString = "15:00"
+        let text = "Forwarded message"
+
+        try await context.app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath, originalSender: originalSender)
+
+        let writtenContent = try #require(context.mockFileWorker.fileSystem[testPath])
+        #expect(writtenContent == "- TODO **15:00** Forwarded message [[Jane Smith]] #stylus-inbox\n")
+    }
+
+    @Test func handleJustTextMessageWithOriginalSenderFirstNameOnly() async throws {
+        let context = TestContext()
+        let originalSender = Message.From(id: 789, name: nil, firstName: "Alice", lastName: nil)
+
+        let testPath = "/test/journal.md"
+        let timeString = "16:00"
+        let text = "Reply from Alice"
+
+        try await context.app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath, originalSender: originalSender)
+
+        let writtenContent = try #require(context.mockFileWorker.fileSystem[testPath])
+        #expect(writtenContent == "- TODO **16:00** Reply from Alice [[Alice]] #stylus-inbox\n")
+    }
+
+    @Test func handleJustTextMessageWithOriginalSenderNoName() async throws {
+        let context = TestContext()
+        let originalSender = Message.From(id: 999, name: nil, firstName: nil, lastName: nil)
+
+        let testPath = "/test/journal.md"
+        let timeString = "17:00"
+        let text = "Anonymous sender"
+
+        try await context.app.handleJustTextMessage(text: text, timeString: timeString, filePath: testPath, originalSender: originalSender)
+
+        let writtenContent = try #require(context.mockFileWorker.fileSystem[testPath])
+        // Should not have user tag when no name is available
+        #expect(writtenContent == "- TODO **17:00** Anonymous sender #stylus-inbox\n")
+    }
+
+    @Test func handleImageMessageWithOriginalSenderAndCaption() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let config = makeTestConfig()
+        let mockBot = MockBot()
+        let testImageData = Data([0xFF, 0xD8, 0xFF])
+        mockBot.loadFileResult = (data: testImageData, filePath: "photo.jpg")
+
+        let app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: LinkProcessor(),
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+
+        let testPath = "/test/kb/journals/2025_01_01.md"
+        let timeString = "14:30"
+        let caption = "Check this out"
+        let originalSender = Message.From(id: 456, name: "jane_doe", firstName: "Jane", lastName: "Doe")
+
+        try await app.handleImageMessage(
+            fileId: "photo",
+            caption: caption,
+            timeString: timeString,
+            filePath: testPath,
+            originalSender: originalSender,
+        )
+
+        let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
+        #expect(writtenContent == """
+        - TODO **14:30** Check this out [[jane_doe]] #stylus-inbox
+        collapsed:: true
+            - ![image](../assets/photo.jpg)
+
+        """)
+    }
+
+    @Test func handleImageMessageWithOriginalSenderNoCaption() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let config = makeTestConfig()
+        let mockBot = MockBot()
+        let testImageData = Data([0xFF, 0xD8, 0xFF])
+        mockBot.loadFileResult = (data: testImageData, filePath: "photo.jpg")
+
+        let app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: LinkProcessor(),
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+
+        let testPath = "/test/kb/journals/2025_01_01.md"
+        let timeString = "15:00"
+        let originalSender = Message.From(id: 456, name: nil, firstName: "Bob", lastName: "Jones")
+
+        try await app.handleImageMessage(
+            fileId: "photo",
+            caption: nil,
+            timeString: timeString,
+            filePath: testPath,
+            originalSender: originalSender,
+        )
+
+        let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
+        #expect(
+            writtenContent ==
+                "- TODO **15:00** [[Bob Jones]] #stylus-inbox\ncollapsed:: true\n    - ![image](../assets/photo.jpg)\n",
+        )
+    }
+
+    @Test func handleDocumentMessageWithOriginalSenderAndCaption() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let config = makeTestConfig()
+        let mockBot = MockBot()
+        let testDocumentData = Data([0x25, 0x50, 0x44, 0x46])
+        mockBot.loadFileResult = (data: testDocumentData, filePath: "report.pdf")
+
+        let app = App(
+            config: config,
+            journalWriter: journalWriter,
+            linkProcessor: LinkProcessor(),
+            dateFormatter: StylusDateFormatter(),
+            bot: mockBot,
+        )
+
+        let testPath = "/test/kb/journals/2025_01_01.md"
+        let timeString = "16:30"
+        let caption = "Important report"
+        let originalSender = Message.From(id: 789, name: "charlie", firstName: "Charlie", lastName: nil)
+
+        try await app.handleDocumentMessage(
+            fileId: "report",
+            fileName: "report.pdf",
+            caption: caption,
+            timeString: timeString,
+            filePath: testPath,
+            originalSender: originalSender,
+        )
+
+        let writtenContent = try #require(mockFileWorker.fileSystem[testPath])
+        #expect(
+            writtenContent ==
+                "- TODO **16:30** Important report [[charlie]] #stylus-inbox\ncollapsed:: true\n    - ![report.pdf](../assets/report.pdf)\n",
+        )
+    }
+
     // MARK: - Helpers
 
     private func makeTestConfig() -> Config {
