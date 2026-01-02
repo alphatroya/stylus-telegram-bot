@@ -30,7 +30,7 @@ struct LinkProcessor {
         // Adobe
         "s_cid", "s_kwcid",
         // Other common tracking
-        "source", "medium", "campaign", "ref", "referrer", "affiliate_id", "campaign_id",
+        "referrer", "affiliate_id", "campaign_id",
         // Analytics platforms
         "_ga", "_gl", "_ke", "vero_conv", "vero_id", "wickedid", "yclid",
     ]
