@@ -18,35 +18,12 @@ enum FileNameGenerationError: Error, LocalizedError {
 // MARK: - MessageHandler
 
 protocol MessageHandler {
-    func handleJustTextMessage(
-        text: String, timeString: String, filePath: String, originalSender: Message.From?,
-    ) async throws
-
-    func handleImageMessage(
-        fileId: String,
-        caption: String?,
-        timeString: String,
-        filePath: String,
-        originalSender: Message.From?,
-    ) async throws
-
-    func handleDocumentMessage(
-        fileId: String,
-        fileName: String?,
-        caption: String?,
-        timeString: String,
-        filePath: String,
-        originalSender: Message.From?,
-    ) async throws
-
     func handleMessageType(
         _ messageType: Message.MessageType,
         timeString: String,
         filePath: String,
         originalSender: Message.From?,
     ) async
-
-    func saveFileWithUniqueFilename(data: Data, baseFileName: String, assetsURL: URL) async throws -> String
 }
 
 // MARK: - DefaultMessageHandler
