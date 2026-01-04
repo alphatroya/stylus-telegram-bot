@@ -163,3 +163,89 @@ actor MockLinkProcessor {
         processLinksResult ?? text
     }
 }
+
+// MARK: - MockMessageHandler
+
+final class MockMessageHandler: MessageHandler, @unchecked Sendable {
+    // MARK: Properties
+
+    var handleJustTextMessageCallCount = 0
+    var handleImageMessageCallCount = 0
+    var handleDocumentMessageCallCount = 0
+    var handleMessageTypeCallCount = 0
+    var saveFileWithUniqueFilenameCallCount = 0
+
+    var handleJustTextMessageError: Error?
+    var handleImageMessageError: Error?
+    var handleDocumentMessageError: Error?
+    var saveFileWithUniqueFilenameError: Error?
+    var saveFileWithUniqueFilenameResult: String?
+
+    // MARK: Functions
+
+    func handleJustTextMessage(
+        text _: String, timeString _: String, filePath _: String, originalSender _: Message.From?,
+    ) async throws {
+        handleJustTextMessageCallCount += 1
+        if let error = handleJustTextMessageError {
+            throw error
+        }
+    }
+
+    func handleImageMessage(
+        fileId _: String,
+        caption _: String?,
+        timeString _: String,
+        filePath _: String,
+        originalSender _: Message.From?,
+    ) async throws {
+        handleImageMessageCallCount += 1
+        if let error = handleImageMessageError {
+            throw error
+        }
+    }
+
+    func handleDocumentMessage(
+        fileId _: String,
+        fileName _: String?,
+        caption _: String?,
+        timeString _: String,
+        filePath _: String,
+        originalSender _: Message.From?,
+    ) async throws {
+        handleDocumentMessageCallCount += 1
+        if let error = handleDocumentMessageError {
+            throw error
+        }
+    }
+
+    func handleMessageType(
+        _: Message.MessageType,
+        timeString _: String,
+        filePath _: String,
+        originalSender _: Message.From?,
+    ) async {
+        handleMessageTypeCallCount += 1
+    }
+
+    func saveFileWithUniqueFilename(data _: Data, baseFileName: String, assetsURL _: URL) async throws -> String {
+        saveFileWithUniqueFilenameCallCount += 1
+        if let error = saveFileWithUniqueFilenameError {
+            throw error
+        }
+        return saveFileWithUniqueFilenameResult ?? baseFileName
+    }
+
+    func reset() {
+        handleJustTextMessageCallCount = 0
+        handleImageMessageCallCount = 0
+        handleDocumentMessageCallCount = 0
+        handleMessageTypeCallCount = 0
+        saveFileWithUniqueFilenameCallCount = 0
+        handleJustTextMessageError = nil
+        handleImageMessageError = nil
+        handleDocumentMessageError = nil
+        saveFileWithUniqueFilenameError = nil
+        saveFileWithUniqueFilenameResult = nil
+    }
+}
