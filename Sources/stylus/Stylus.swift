@@ -5,25 +5,46 @@ import Foundation
 @main
 struct Stylus {
     static func main() async throws {
+        let isReadeckMode = CommandLine.arguments.contains("--readeck")
         let config = try await readConfig(provider: yamlProvider())
-        let telegramBot = TelegramBot(
-            config: .init(token: config.telegramBotApiKey.unsafeValue),
-        )
-        let journalWriter = JournalWriter()
-        let linkProcessor = LinkProcessor()
 
-        let messageHandler = DefaultMessageHandler(
-            config: config,
-            journalWriter: journalWriter,
-            linkProcessor: linkProcessor,
-            bot: telegramBot,
-        )
+        if isReadeckMode {
+            validateReadeckConfig(config)
+            let runner = ReadeckSyncRunner(config: config)
+            try await runner.run()
+        } else {
+            let telegramBot = TelegramBot(
+                config: .init(token: config.telegramBotApiKey.unsafeValue),
+            )
+            let journalWriter = JournalWriter()
+            let linkProcessor = LinkProcessor()
 
-        let bot = App(
-            config: config,
-            bot: telegramBot,
-            messageHandler: messageHandler,
-        )
-        try await bot.run()
+            let messageHandler = DefaultMessageHandler(
+                config: config,
+                journalWriter: journalWriter,
+                linkProcessor: linkProcessor,
+                bot: telegramBot,
+            )
+
+            let bot = App(
+                config: config,
+                bot: telegramBot,
+                messageHandler: messageHandler,
+            )
+            try await bot.run()
+        }
+    }
+
+    // MARK: Private Functions
+
+    private static func validateReadeckConfig(_ config: Config) {
+        guard config.readeckEndpoint != nil else {
+            print("Error: --readeck flag requires 'readeckEndpoint' in config file")
+            Foundation.exit(1)
+        }
+        guard config.readeckApiToken != nil else {
+            print("Error: --readeck flag requires 'readeckApiToken' in config file")
+            Foundation.exit(1)
+        }
     }
 }

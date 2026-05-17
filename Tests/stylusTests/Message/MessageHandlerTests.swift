@@ -23,6 +23,8 @@ struct MessageHandlerTestContext {
             telegramBotApiKey: SecretString("test-key"),
             telegramUserID: 123,
             knowledgeBaseLocation: "/test/kb",
+            readeckEndpoint: nil,
+            readeckApiToken: nil,
         )
         mockBot = MockBot()
         linkProcessor = LinkProcessor()
@@ -39,7 +41,7 @@ struct MessageHandlerTestContext {
 
 @Suite("MessageHandlerTests")
 struct MessageHandlerTests {
-    @Test func handleJustTextMessageProcessesTextCorrectly() async throws {
+    @Test func `handle just text message processes text correctly`() async throws {
         let context = MessageHandlerTestContext()
 
         let testPath = "/test/journal.md"
@@ -53,7 +55,7 @@ struct MessageHandlerTests {
         #expect(writtenContent == "- TODO **14:30** Test message without links #stylus-inbox\n")
     }
 
-    @Test func handleJustTextMessageAddsInboxTag() async throws {
+    @Test func `handle just text message adds inbox tag`() async throws {
         let context = MessageHandlerTestContext()
 
         let testPath = "/test/journal.md"
@@ -66,7 +68,7 @@ struct MessageHandlerTests {
         #expect(writtenContent == "- TODO **10:15** Simple message #stylus-inbox\n")
     }
 
-    @Test func handleJustTextMessageAppendsToExistingFile() async throws {
+    @Test func `handle just text message appends to existing file`() async throws {
         let context = MessageHandlerTestContext()
 
         let testPath = "/test/journal.md"
@@ -83,7 +85,7 @@ struct MessageHandlerTests {
         #expect(appendedContent == "- TODO **10:15** Second message #stylus-inbox\n")
     }
 
-    @Test func handleImageMessageCreatesCorrectMarkdownWithoutCaption() async throws {
+    @Test func `handle image message creates correct markdown without caption`() async throws {
         let context = MessageHandlerTestContext()
         let testImageData = Data([0xFF, 0xD8, 0xFF]) // JPEG header
         context.mockBot.loadFileResult = (data: testImageData, filePath: "file_123.jpg")
@@ -104,7 +106,7 @@ struct MessageHandlerTests {
         )
     }
 
-    @Test func handleImageMessageCreatesCorrectMarkdownWithCaption() async throws {
+    @Test func `handle image message creates correct markdown with caption`() async throws {
         let context = MessageHandlerTestContext()
         let testImageData = Data([0x89, 0x50, 0x4E, 0x47]) // PNG header
         context.mockBot.loadFileResult = (data: testImageData, filePath: "photo_456.png")
@@ -131,7 +133,7 @@ struct MessageHandlerTests {
         """)
     }
 
-    @Test func handleImageMessageHandlesFileWithoutExtension() async throws {
+    @Test func `handle image message handles file without extension`() async throws {
         let context = MessageHandlerTestContext()
         let testImageData = Data([0x00, 0x01, 0x02])
         context.mockBot.loadFileResult = (data: testImageData, filePath: "file_789")
@@ -156,7 +158,7 @@ struct MessageHandlerTests {
         )
     }
 
-    @Test func handleImageMessageSavesImageToAssetsFolder() async throws {
+    @Test func `handle image message saves image to assets folder`() async throws {
         let context = MessageHandlerTestContext()
         let testImageData = Data([0xFF, 0xD8, 0xFF, 0xE0])
         context.mockBot.loadFileResult = (data: testImageData, filePath: "image_999.jpeg")
@@ -170,7 +172,7 @@ struct MessageHandlerTests {
         #expect(context.mockFileWorker.fileSystem[assetPath] == "DATA_4_BYTES")
     }
 
-    @Test func handleImageMessageAddsInboxTagToEmptyCaption() async throws {
+    @Test func `handle image message adds inbox tag to empty caption`() async throws {
         let context = MessageHandlerTestContext()
         let testImageData = Data([0x47, 0x49, 0x46]) // GIF header
         context.mockBot.loadFileResult = (data: testImageData, filePath: "animation.gif")
@@ -192,7 +194,7 @@ struct MessageHandlerTests {
         )
     }
 
-    @Test func handleImageMessageAppendsToExistingJournal() async throws {
+    @Test func `handle image message appends to existing journal`() async throws {
         let context = MessageHandlerTestContext()
         let testImageData = Data([0xFF, 0xD8])
         context.mockBot.loadFileResult = (data: testImageData, filePath: "photo.jpg")
@@ -221,7 +223,7 @@ struct MessageHandlerTests {
         )
     }
 
-    @Test func handleDocumentMessageCreatesCorrectMarkdownWithFileName() async throws {
+    @Test func `handle document message creates correct markdown with file name`() async throws {
         let context = MessageHandlerTestContext()
         let testDocumentData = Data([0x25, 0x50, 0x44, 0x46]) // PDF header
         context.mockBot.loadFileResult = (data: testDocumentData, filePath: "document_123.pdf")
@@ -248,7 +250,7 @@ struct MessageHandlerTests {
         )
     }
 
-    @Test func handleDocumentMessageCreatesCorrectMarkdownWithCaption() async throws {
+    @Test func `handle document message creates correct markdown with caption`() async throws {
         let context = MessageHandlerTestContext()
         let testDocumentData = Data([0x50, 0x4B, 0x03, 0x04]) // ZIP header
         context.mockBot.loadFileResult = (data: testDocumentData, filePath: "archive_456.zip")
@@ -275,7 +277,7 @@ struct MessageHandlerTests {
         )
     }
 
-    @Test func handleDocumentMessageHandlesNilFileName() async throws {
+    @Test func `handle document message handles nil file name`() async throws {
         let context = MessageHandlerTestContext()
         let testDocumentData = Data([0x7F, 0x45, 0x4C, 0x46]) // ELF header
         context.mockBot.loadFileResult = (data: testDocumentData, filePath: "file_789.bin")
@@ -301,7 +303,7 @@ struct MessageHandlerTests {
         )
     }
 
-    @Test func handleDocumentMessageHandlesEmptyFileName() async throws {
+    @Test func `handle document message handles empty file name`() async throws {
         let context = MessageHandlerTestContext()
         let testDocumentData = Data([0x89, 0x48, 0x44, 0x46])
         context.mockBot.loadFileResult = (data: testDocumentData, filePath: "document_999")
@@ -327,7 +329,7 @@ struct MessageHandlerTests {
         )
     }
 
-    @Test func handleDocumentMessageSavesDocumentToAssetsFolder() async throws {
+    @Test func `handle document message saves document to assets folder`() async throws {
         let context = MessageHandlerTestContext()
         let testDocumentData = Data([0x25, 0x50, 0x44, 0x46, 0x2D])
         context.mockBot.loadFileResult = (data: testDocumentData, filePath: "contract.pdf")
@@ -347,7 +349,7 @@ struct MessageHandlerTests {
         #expect(context.mockFileWorker.fileSystem[assetPath] == "DATA_5_BYTES")
     }
 
-    @Test func handleDocumentMessageAppendsToExistingJournal() async throws {
+    @Test func `handle document message appends to existing journal`() async throws {
         let context = MessageHandlerTestContext()
         let testDocumentData = Data([0x25, 0x50])
         context.mockBot.loadFileResult = (data: testDocumentData, filePath: "invoice.pdf")
@@ -375,7 +377,7 @@ struct MessageHandlerTests {
         )
     }
 
-    @Test func handleDocumentMessageAppendsRandomSuffixWhenFilenameExists() async throws {
+    @Test func `handle document message appends random suffix when filename exists`() async throws {
         let context = MessageHandlerTestContext()
         let testDocumentData = Data([0x25, 0x50, 0x44, 0x46])
         context.mockBot.loadFileResult = (data: testDocumentData, filePath: "report.pdf")
@@ -410,7 +412,7 @@ struct MessageHandlerTests {
         #expect(writtenContent.contains("![\(newFileName)](../assets/\(newFileName))"))
     }
 
-    @Test func handleImageMessageAppendsRandomSuffixWhenFilenameExists() async throws {
+    @Test func `handle image message appends random suffix when filename exists`() async throws {
         let context = MessageHandlerTestContext()
         let testImageData = Data([0xFF, 0xD8, 0xFF])
         context.mockBot.loadFileResult = (data: testImageData, filePath: "photo_123.jpg")
@@ -439,7 +441,7 @@ struct MessageHandlerTests {
         #expect(writtenContent.contains("![image](../assets/\(newFileName))"))
     }
 
-    @Test func handleDocumentMessageWithMultipleCollisionsEventuallySucceeds() async throws {
+    @Test func `handle document message with multiple collisions eventually succeeds`() async throws {
         let context = MessageHandlerTestContext()
         let testDocumentData = Data([0x25, 0x50])
         context.mockBot.loadFileResult = (data: testDocumentData, filePath: "data.txt")
@@ -468,7 +470,7 @@ struct MessageHandlerTests {
         #expect(context.mockFileWorker.fileSystem["/test/kb/assets/data.txt"] == "existing file")
     }
 
-    @Test func handleDocumentMessageSanitizesPathTraversalInFileName() async throws {
+    @Test func `handle document message sanitizes path traversal in file name`() async throws {
         let context = MessageHandlerTestContext()
         context.mockBot.loadFileResult = (data: Data("test document".utf8), filePath: "file_path_info.pdf")
 
@@ -493,7 +495,7 @@ struct MessageHandlerTests {
         #expect(context.mockFileWorker.fileSystem[maliciousPath] == nil)
     }
 
-    @Test func handleDocumentMessageRejectsDotFileName() async throws {
+    @Test func `handle document message rejects dot file name`() async throws {
         let context = MessageHandlerTestContext()
         context.mockBot.loadFileResult = (data: Data("test document".utf8), filePath: "file_path_info.pdf")
 
@@ -514,7 +516,7 @@ struct MessageHandlerTests {
         #expect(context.mockFileWorker.fileSystem[expectedAssetPath] != nil)
     }
 
-    @Test func handleDocumentMessageRejectsDotDotFileName() async throws {
+    @Test func `handle document message rejects dot dot file name`() async throws {
         let context = MessageHandlerTestContext()
         context.mockBot.loadFileResult = (data: Data("test document".utf8), filePath: "file_path_info.txt")
 
@@ -535,7 +537,7 @@ struct MessageHandlerTests {
         #expect(context.mockFileWorker.fileSystem[expectedAssetPath] != nil)
     }
 
-    @Test func handleDocumentMessageExtractsBaseNameFromComplexPath() async throws {
+    @Test func `handle document message extracts base name from complex path`() async throws {
         let context = MessageHandlerTestContext()
         context.mockBot.loadFileResult = (data: Data("test document".utf8), filePath: "file_path_info.pdf")
 
@@ -560,7 +562,7 @@ struct MessageHandlerTests {
         #expect(context.mockFileWorker.fileSystem[maliciousPath] == nil)
     }
 
-    @Test func handleJustTextMessageWithOriginalSenderUsername() async throws {
+    @Test func `handle just text message with original sender username`() async throws {
         let context = MessageHandlerTestContext()
         let originalSender = Message.From(id: 456, name: "johndoe", firstName: "John", lastName: "Doe")
 
@@ -579,7 +581,7 @@ struct MessageHandlerTests {
         #expect(writtenContent == "- TODO **14:30** Replied message [[johndoe]] #stylus-inbox\n")
     }
 
-    @Test func handleJustTextMessageWithOriginalSenderFullName() async throws {
+    @Test func `handle just text message with original sender full name`() async throws {
         let context = MessageHandlerTestContext()
         let originalSender = Message.From(id: 456, name: nil, firstName: "Jane", lastName: "Smith")
 
@@ -598,7 +600,7 @@ struct MessageHandlerTests {
         #expect(writtenContent == "- TODO **15:00** Forwarded message [[Jane Smith]] #stylus-inbox\n")
     }
 
-    @Test func handleJustTextMessageWithOriginalSenderFirstNameOnly() async throws {
+    @Test func `handle just text message with original sender first name only`() async throws {
         let context = MessageHandlerTestContext()
         let originalSender = Message.From(id: 789, name: nil, firstName: "Alice", lastName: nil)
 
@@ -617,7 +619,7 @@ struct MessageHandlerTests {
         #expect(writtenContent == "- TODO **16:00** Reply from Alice [[Alice]] #stylus-inbox\n")
     }
 
-    @Test func handleJustTextMessageWithOriginalSenderNoName() async throws {
+    @Test func `handle just text message with original sender no name`() async throws {
         let context = MessageHandlerTestContext()
         let originalSender = Message.From(id: 999, name: nil, firstName: nil, lastName: nil)
 
@@ -637,7 +639,7 @@ struct MessageHandlerTests {
         #expect(writtenContent == "- TODO **17:00** Anonymous sender #stylus-inbox\n")
     }
 
-    @Test func handleImageMessageWithOriginalSenderAndCaption() async throws {
+    @Test func `handle image message with original sender and caption`() async throws {
         let context = MessageHandlerTestContext()
         let testImageData = Data([0xFF, 0xD8, 0xFF])
         context.mockBot.loadFileResult = (data: testImageData, filePath: "photo.jpg")
@@ -664,7 +666,7 @@ struct MessageHandlerTests {
         """)
     }
 
-    @Test func handleImageMessageWithOriginalSenderNoCaption() async throws {
+    @Test func `handle image message with original sender no caption`() async throws {
         let context = MessageHandlerTestContext()
         let testImageData = Data([0xFF, 0xD8, 0xFF])
         context.mockBot.loadFileResult = (data: testImageData, filePath: "photo.jpg")
@@ -688,7 +690,7 @@ struct MessageHandlerTests {
         )
     }
 
-    @Test func handleDocumentMessageWithOriginalSenderAndCaption() async throws {
+    @Test func `handle document message with original sender and caption`() async throws {
         let context = MessageHandlerTestContext()
         let testDocumentData = Data([0x25, 0x50, 0x44, 0x46])
         context.mockBot.loadFileResult = (data: testDocumentData, filePath: "report.pdf")
