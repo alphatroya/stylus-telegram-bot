@@ -76,16 +76,20 @@ struct Config {
     let telegramUserID: Int
     /// Path to the knowledge base directory
     let knowledgeBaseLocation: String
+    /// Readeck server endpoint URL (optional, required when --readeck mode is active)
+    let readeckEndpoint: String?
+    /// Readeck API token (optional, required when --readeck mode is active)
+    let readeckApiToken: SecretString?
 }
 
 // MARK: CustomStringConvertible
 
 extension Config: CustomStringConvertible {
     var description: String {
-        """
-        Config(telegramBotApiKey: [REDACTED], telegramUserID: \(telegramUserID), \
-        knowledgeBaseLocation: "\(knowledgeBaseLocation)")
-        """
+        "Config(telegramBotApiKey: [REDACTED], telegramUserID: \(telegramUserID), "
+            + "knowledgeBaseLocation: \"\(knowledgeBaseLocation)\","
+            + " readeckEndpoint: \(readeckEndpoint ?? "nil"),"
+            + " readeckApiToken: \(readeckApiToken != nil ? "[REDACTED]" : "nil"))"
     }
 }
 
@@ -120,5 +124,7 @@ func readConfig(provider: ConfigProvider) throws -> Config {
         ),
         telegramUserID: configReader.requiredInt(forKey: "telegramUserId"),
         knowledgeBaseLocation: configReader.requiredString(forKey: "knowledgeBaseLocation"),
+        readeckEndpoint: configReader.string(forKey: "readeckEndpoint"),
+        readeckApiToken: configReader.string(forKey: "readeckApiToken", isSecret: true).map { SecretString($0) },
     )
 }

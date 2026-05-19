@@ -217,7 +217,7 @@ struct LinkProcessor {
 
 // MARK: - LinkMetadata
 
-struct LinkMetadata: Sendable {
+struct LinkMetadata {
     var title: String?
     var url: URL
 }

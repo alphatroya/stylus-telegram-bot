@@ -23,6 +23,8 @@ struct TestContext {
             telegramBotApiKey: SecretString("test-key"),
             telegramUserID: 123,
             knowledgeBaseLocation: "/test/kb",
+            readeckEndpoint: nil,
+            readeckApiToken: nil,
         )
         mockBot = MockBot()
         mockMessageHandler = MockMessageHandler()
@@ -41,7 +43,7 @@ struct TestContext {
 
 @Suite("AppTests")
 struct AppTests {
-    @Test func linkProcessorAndTagManagerWorkTogether() async {
+    @Test func `link processor and tag manager work together`() async {
         let mockMetadataProvider = MockMetadataProvider()
         await mockMetadataProvider.setMockTitle("Example Page", for: "https://example.com")
 

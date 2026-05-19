@@ -16,7 +16,7 @@ struct DateFormatterTests {
         ("yyyy-MM-dd", 1_640_995_200.0, "2022-01-01"),
         ("yyyy_MM_dd", 1_609_459_200.0, "2021_01_01"),
     ])
-    func formatsDateWithPattern(format: String, timestamp: TimeInterval, expected: String) async {
+    func `formats date with pattern`(format: String, timestamp: TimeInterval, expected: String) async {
         let date = Date(timeIntervalSince1970: timestamp)
         let formatter = StylusDateFormatter()
         let result = await formatter.formatDate(format, date: date)

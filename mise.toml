@@ -2,4 +2,5 @@
 "npm:@fission-ai/openspec" = "latest"
 swiftformat = "latest"
 npm = "latest"
+"npm:@mariozechner/pi-coding-agent" = "latest"
 

@@ -27,7 +27,7 @@ private func inMemoryStorage(values: [String: ConfigValue] = [:]) -> InMemoryPro
 
 @Suite("ConfigReaderTests")
 struct ConfigReaderTests {
-    @Test func successWithAllRequiredKeys() throws {
+    @Test func `success with all required keys`() throws {
         let provider = inMemoryStorage(values: [
             "telegramBotApiKey": "test-api-key",
             "telegramUserId": 123_456_789,
@@ -42,7 +42,7 @@ struct ConfigReaderTests {
         #expect(config.knowledgeBaseLocation == "/path/to/knowledge")
     }
 
-    @Test func throwsWhenTelegramBotApiKeyMissing() {
+    @Test func `throws when telegram bot api key missing`() {
         let provider = inMemoryStorage(values: [
             "telegramUserId": 123_456_789,
             "knowledgeBaseLocation": "/path/to/knowledge",
@@ -53,7 +53,7 @@ struct ConfigReaderTests {
         }
     }
 
-    @Test func throwsWhenTelegramUserIDMissing() {
+    @Test func `throws when telegram user ID missing`() {
         let provider = inMemoryStorage(values: [
             "telegramBotApiKey": "test-api-key",
             "knowledgeBaseLocation": "/path/to/knowledge",
@@ -64,7 +64,7 @@ struct ConfigReaderTests {
         }
     }
 
-    @Test func throwsWhenKnowledgeBaseLocationMissing() {
+    @Test func `throws when knowledge base location missing`() {
         let provider = inMemoryStorage(values: [
             "telegramBotApiKey": "test-api-key",
             "telegramUserId": 123_456_789,
@@ -75,7 +75,7 @@ struct ConfigReaderTests {
         }
     }
 
-    @Test func throwsWhenAllKeysMissing() {
+    @Test func `throws when all keys missing`() {
         let provider = inMemoryStorage(values: [:])
 
         #expect(throws: (any Error).self) {
@@ -83,7 +83,7 @@ struct ConfigReaderTests {
         }
     }
 
-    @Test func secretStringHidesValueInDescription() {
+    @Test func `secret string hides value in description`() {
         let secret = SecretString("super-secret-api-key")
 
         #expect(String(describing: secret) == "[REDACTED]")
@@ -91,7 +91,7 @@ struct ConfigReaderTests {
         #expect(secret.unsafeValue == "super-secret-api-key")
     }
 
-    @Test func configHidesApiKeyInDescription() throws {
+    @Test func `config hides api key in description`() throws {
         let provider = inMemoryStorage(values: [
             "telegramBotApiKey": "secret-token-12345",
             "telegramUserId": 987_654_321,

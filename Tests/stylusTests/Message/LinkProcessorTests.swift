@@ -31,13 +31,13 @@ struct LinkProcessorTests {
         ("Angle brackets <https://example.com>", ["https://example.com"]),
         ("Curly braces {https://example.com}", ["https://example.com"]),
     ])
-    func extractURLs(input: String, expected: [String]) {
+    func `extract UR ls`(input: String, expected: [String]) {
         let processor = LinkProcessor()
         #expect(processor.extractURLs(from: input) == expected)
     }
 
-    @Test("Fetch page title successfully")
-    func fetchPageTitleSuccess() async throws {
+    @Test
+    func `Fetch page title successfully`() async throws {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Test Page Title", for: "https://example.com")
         let processor = LinkProcessor()
@@ -47,8 +47,8 @@ struct LinkProcessorTests {
         #expect(title == "Test Page Title")
     }
 
-    @Test("Fetch page title with empty title")
-    func fetchPageTitleEmpty() async throws {
+    @Test
+    func `Fetch page title with empty title`() async throws {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("", for: "https://example.com")
         let processor = LinkProcessor()
@@ -58,8 +58,8 @@ struct LinkProcessorTests {
         #expect(title == "")
     }
 
-    @Test("Fetch page title with invalid URL")
-    func fetchPageTitleInvalidURL() async {
+    @Test
+    func `Fetch page title with invalid URL`() async {
         let mockProvider = MockMetadataProvider()
         let processor = LinkProcessor()
 
@@ -67,8 +67,8 @@ struct LinkProcessorTests {
         #expect(title == nil)
     }
 
-    @Test("Fetch page title with error")
-    func fetchPageTitleError() async {
+    @Test
+    func `Fetch page title with error`() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setShouldThrowError(true)
         let processor = LinkProcessor()
@@ -81,8 +81,8 @@ struct LinkProcessorTests {
         }
     }
 
-    @Test("Process links in text with no URLs")
-    func processLinksNoURLs() async {
+    @Test
+    func `Process links in text with no URLs`() async {
         let processor = LinkProcessor()
         let input = "This text has no links"
 
@@ -90,8 +90,8 @@ struct LinkProcessorTests {
         #expect(result == input)
     }
 
-    @Test("Process links in text with single URL")
-    func processLinksSingleURL() async {
+    @Test
+    func `Process links in text with single URL`() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Example Page", for: "https://example.com")
         let processor = LinkProcessor()
@@ -101,8 +101,8 @@ struct LinkProcessorTests {
         #expect(result == "Visit [Example Page](https://example.com) for more info")
     }
 
-    @Test("Process links in text with multiple URLs")
-    func processLinksMultipleURLs() async {
+    @Test
+    func `Process links in text with multiple URLs`() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Example", for: "https://example.com")
         await mockProvider.setMockTitle("Test Site", for: "https://test.com")
@@ -113,8 +113,8 @@ struct LinkProcessorTests {
         #expect(result == "Check [Example](https://example.com) and also [Test Site](https://test.com)")
     }
 
-    @Test("Process links with special characters in title")
-    func processLinksSpecialCharsInTitle() async {
+    @Test
+    func `Process links with special characters in title`() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Page with & special <chars>", for: "https://example.com")
         let processor = LinkProcessor()
@@ -124,8 +124,8 @@ struct LinkProcessorTests {
         #expect(result == "Link: [Page with & special <chars>](https://example.com)")
     }
 
-    @Test("Process links with special characters in URL")
-    func processLinksSpecialCharsInURL() async {
+    @Test
+    func `Process links with special characters in URL`() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Test Page", for: "https://example.com/path?param=value&other=123")
         let processor = LinkProcessor()
@@ -135,8 +135,8 @@ struct LinkProcessorTests {
         #expect(result == "URL: [Test Page](https://example.com/path?param=value&other=123)")
     }
 
-    @Test("Process links with missing title fallback to URL")
-    func processLinksMissingTitle() async {
+    @Test
+    func `Process links with missing title fallback to URL`() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("", for: "https://example.com")
         let processor = LinkProcessor()
@@ -146,8 +146,8 @@ struct LinkProcessorTests {
         #expect(result == "Link: https://example.com")
     }
 
-    @Test("Process links with duplicate URLs")
-    func processLinksDuplicateURLs() async {
+    @Test
+    func `Process links with duplicate URLs`() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Example", for: "https://example.com")
         let processor = LinkProcessor()
@@ -157,8 +157,8 @@ struct LinkProcessorTests {
         #expect(result == "Visit [Example](https://example.com) and [Example](https://example.com) again")
     }
 
-    @Test("Process links with overlapping URLs")
-    func processLinksOverlappingURLs() async {
+    @Test
+    func `Process links with overlapping URLs`() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Short", for: "https://short.com")
         await mockProvider.setMockTitle("Long", for: "https://long.com/path")
@@ -183,13 +183,13 @@ struct LinkProcessorTests {
         ("https://example.com?", "https://example.com"),
         ("https://example.com?normal_param=value", "https://example.com?normal_param=value"),
     ])
-    func cleanTrackingParameters(input: String, expected: String) {
+    func `clean tracking parameters`(input: String, expected: String) {
         let processor = LinkProcessor()
         #expect(processor.cleanTrackingParameters(from: input) == expected)
     }
 
-    @Test("Extract URLs with tracking parameters removed")
-    func extractURLsWithTrackingRemoved() {
+    @Test
+    func `Extract URLs with tracking parameters removed`() {
         let processor = LinkProcessor()
         let input = "Check out https://example.com?utm_source=google&utm_medium=email&keep=this"
 
@@ -197,8 +197,8 @@ struct LinkProcessorTests {
         #expect(urls == ["https://example.com?keep=this"])
     }
 
-    @Test("Process links removes tracking parameters")
-    func processLinksRemovesTracking() async {
+    @Test
+    func `Process links removes tracking parameters`() async {
         let mockProvider = MockMetadataProvider()
         await mockProvider.setMockTitle("Clean Example", for: "https://example.com?keep=this")
         let processor = LinkProcessor()
@@ -208,8 +208,8 @@ struct LinkProcessorTests {
         #expect(result == "Visit [Clean Example](https://example.com?keep=this) for info")
     }
 
-    @Test("Clean tracking preserves URL fragments and paths")
-    func cleanTrackingPreservesFragmentsAndPaths() {
+    @Test
+    func `Clean tracking preserves URL fragments and paths`() {
         let processor = LinkProcessor()
         let input = "https://example.com/path/to/page?utm_source=test&valid=param#section"
 
@@ -217,8 +217,8 @@ struct LinkProcessorTests {
         #expect(result == "https://example.com/path/to/page?valid=param#section")
     }
 
-    @Test("Clean tracking handles prefix matching")
-    func cleanTrackingHandlesPrefixMatching() {
+    @Test
+    func `Clean tracking handles prefix matching`() {
         let processor = LinkProcessor()
         let input = "https://amazon.com?pf_rd_custom=123&pf_rd_another=456&keep=this"
 
@@ -226,8 +226,8 @@ struct LinkProcessorTests {
         #expect(result == "https://amazon.com?keep=this")
     }
 
-    @Test("Clean tracking with malformed URLs returns original")
-    func cleanTrackingMalformedURL() {
+    @Test
+    func `Clean tracking with malformed URLs returns original`() {
         let processor = LinkProcessor()
         let input = "not-a-url"
 
@@ -254,12 +254,12 @@ actor MockMetadataProvider: LinkMetadataProviderProtocol {
         shouldThrowError = value
     }
 
-    func fetchMetadata(for url: URL) async throws -> LinkMetadata {
+    func fetchMetadata(for url: URL) async throws -> stylus.LinkMetadata {
         if shouldThrowError {
             throw URLError(.badServerResponse)
         }
 
-        var metadata = LinkMetadata(url: url)
+        var metadata = stylus.LinkMetadata(url: url)
         if let title = mockTitles[url.absoluteString] {
             metadata.title = title
         } else {

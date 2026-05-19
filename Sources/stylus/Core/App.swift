@@ -19,7 +19,8 @@ struct App {
         print("🚀 Starting stylus bot with one-shot execution model")
 
         let journalsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent(
-            "journals")
+            "journals",
+        )
         try await journalWriter.ensureDirectoryExists(at: journalsURL.path)
 
         // Read offset state

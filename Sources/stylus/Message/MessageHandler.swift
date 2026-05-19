@@ -71,7 +71,8 @@ struct DefaultMessageHandler: MessageHandler {
         originalSender: Message.From? = nil,
     ) async throws {
         let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent(
-            "assets")
+            "assets",
+        )
         try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
 
         let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
@@ -157,7 +158,8 @@ struct DefaultMessageHandler: MessageHandler {
         originalSender: Message.From? = nil,
     ) async throws {
         let assetsURL = URL(fileURLWithPath: config.knowledgeBaseLocation).appendingPathComponent(
-            "assets")
+            "assets",
+        )
         try await journalWriter.ensureDirectoryExists(at: assetsURL.path)
 
         let (fileData, filePathInfo) = try await bot.loadFile(with: fileId)
