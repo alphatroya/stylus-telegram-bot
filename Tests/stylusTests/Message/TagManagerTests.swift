@@ -14,7 +14,7 @@ struct TagManagerTests {
         ("   ", "   "),
         ("Only line\n\n", "Only line #stylus-inbox\n\n"),
     ])
-    func addTag(input: String, expected: String) {
+    func `add tag`(input: String, expected: String) {
         let result = addStylusInboxTag(to: input)
         #expect(result == expected)
     }
@@ -24,7 +24,7 @@ struct TagManagerTests {
         ("John Smith", "[[John Smith]]"),
         ("jane_doe", "[[jane_doe]]"),
     ])
-    func createUserTagTest(input: String, expected: String) {
+    func `create user tag test`(input: String, expected: String) {
         let result = createUserTag(from: input)
         #expect(result == expected)
     }
@@ -34,62 +34,62 @@ struct TagManagerTests {
         ("Test message", "john_doe", "Test message [[john_doe]]"),
         ("First line\nSecond line", "Alice", "First line [[Alice]]\nSecond line"),
     ])
-    func addUserTagTest(input: String, userName: String, expected: String) {
+    func `add user tag test`(input: String, userName: String, expected: String) {
         let result = addUserTag(to: input, userName: userName)
         #expect(result == expected)
     }
 
     @Test
-    func extractUserNameWithUsername() {
+    func `extract user name with username`() {
         let from = Message.From(id: 123, name: "johndoe", firstName: "John", lastName: "Doe")
         let result = extractUserName(from: from)
         #expect(result == "johndoe")
     }
 
     @Test
-    func extractUserNameWithFullName() {
+    func `extract user name with full name`() {
         let from = Message.From(id: 123, name: nil, firstName: "John", lastName: "Doe")
         let result = extractUserName(from: from)
         #expect(result == "John Doe")
     }
 
     @Test
-    func extractUserNameWithFirstNameOnly() {
+    func `extract user name with first name only`() {
         let from = Message.From(id: 123, name: nil, firstName: "John", lastName: nil)
         let result = extractUserName(from: from)
         #expect(result == "John")
     }
 
     @Test
-    func extractUserNameWithNoName() {
+    func `extract user name with no name`() {
         let from = Message.From(id: 123, name: nil, firstName: nil, lastName: nil)
         let result = extractUserName(from: from)
         #expect(result == nil)
     }
 
     @Test
-    func extractUserNameWithEmptyStrings() {
+    func `extract user name with empty strings`() {
         let from = Message.From(id: 123, name: "", firstName: "", lastName: "")
         let result = extractUserName(from: from)
         #expect(result == nil)
     }
 
     @Test
-    func extractUserNamePrioritizesUsername() {
+    func `extract user name prioritizes username`() {
         let from = Message.From(id: 123, name: "johnny", firstName: "John", lastName: "Doe")
         let result = extractUserName(from: from)
         #expect(result == "johnny")
     }
 
     @Test
-    func extractUserNameWithFirstNameAndEmptyLastName() {
+    func `extract user name with first name and empty last name`() {
         let from = Message.From(id: 123, name: nil, firstName: "Alice", lastName: "")
         let result = extractUserName(from: from)
         #expect(result == "Alice")
     }
 
     @Test
-    func extractUserNameTrimsWhitespace() {
+    func `extract user name trims whitespace`() {
         let from = Message.From(id: 123, name: nil, firstName: "  John  ", lastName: "  Doe  ")
         let result = extractUserName(from: from)
         #expect(result == "John Doe")

@@ -6,7 +6,7 @@ import Testing
 
 @Suite("JournalWriterTests")
 struct JournalWriterTests {
-    @Test func ensureDirectoryExistsCreatesDirectory() async throws {
+    @Test func `ensure directory exists creates directory`() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
         let testPath = "/test/directory"
@@ -17,7 +17,7 @@ struct JournalWriterTests {
         #expect(mockFileWorker.directories.contains(testPath))
     }
 
-    @Test func ensureDirectoryExistsDoesNotCreateIfExists() async throws {
+    @Test func `ensure directory exists does not create if exists`() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
         let testPath = "/existing/directory"
@@ -30,7 +30,7 @@ struct JournalWriterTests {
         #expect(mockFileWorker.createDirectoryCallCount == 0)
     }
 
-    @Test func appendToJournalFileCreatesNewFile() async throws {
+    @Test func `append to journal file creates new file`() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
         let testPath = "/test/journal.txt"
@@ -43,7 +43,7 @@ struct JournalWriterTests {
         #expect(mockFileWorker.fileHandleForWritingCallCount == 0)
     }
 
-    @Test func appendToJournalFileAppendsToExisting() async throws {
+    @Test func `append to journal file appends to existing`() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
         let testPath = "/test/journal.txt"
@@ -61,7 +61,7 @@ struct JournalWriterTests {
         #expect(mockFileWorker.mockFileHandle.isClosed == true)
     }
 
-    @Test func appendToJournalFileAddsNewlineIfNeeded() async throws {
+    @Test func `append to journal file adds newline if needed`() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
         let testPath = "/test/journal.txt"
@@ -79,7 +79,7 @@ struct JournalWriterTests {
         #expect(mockFileWorker.mockFileHandle.isClosed == true)
     }
 
-    @Test func appendToJournalFileDoesNotAddNewlineWhenNotNeeded() async throws {
+    @Test func `append to journal file does not add newline when not needed`() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
         let testPath = "/test/journal.txt"
@@ -97,7 +97,7 @@ struct JournalWriterTests {
         #expect(mockFileWorker.mockFileHandle.isClosed == true)
     }
 
-    @Test func appendToJournalFileHandlesEmptyExistingFile() async throws {
+    @Test func `append to journal file handles empty existing file`() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
         let testPath = "/test/journal.txt"
@@ -114,7 +114,7 @@ struct JournalWriterTests {
         #expect(mockFileWorker.mockFileHandle.isClosed == true)
     }
 
-    @Test func saveImageFileSavesWhenFileDoesNotExist() async throws {
+    @Test func `save image file saves when file does not exist`() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
         let testPath = "/test/image.jpg"
@@ -125,7 +125,7 @@ struct JournalWriterTests {
         #expect(mockFileWorker.fileSystem[testPath] == "DATA_3_BYTES")
     }
 
-    @Test func saveImageFileThrowsWhenFileExists() async throws {
+    @Test func `save image file throws when file exists`() async throws {
         let mockFileWorker = MockFileWorker()
         let journalWriter = JournalWriter(fileManager: mockFileWorker)
         let testPath = "/test/existing.jpg"

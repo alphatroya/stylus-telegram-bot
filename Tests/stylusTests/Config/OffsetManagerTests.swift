@@ -6,8 +6,8 @@ import Testing
 struct OffsetManagerTests {
     // MARK: Basic Operations Tests
 
-    @Test("Read offset when no file exists returns nil")
-    func readOffsetNoFile() throws {
+    @Test
+    func `Read offset when no file exists returns nil`() throws {
         let tempDir = try createTempDirectory()
         defer { cleanupTempDirectory(tempDir) }
 
@@ -17,8 +17,8 @@ struct OffsetManagerTests {
         #expect(offset == nil)
     }
 
-    @Test("Write and read offset successfully")
-    func writeAndReadOffset() throws {
+    @Test
+    func `Write and read offset successfully`() throws {
         let tempDir = try createTempDirectory()
         defer { cleanupTempDirectory(tempDir) }
 
@@ -31,8 +31,8 @@ struct OffsetManagerTests {
         #expect(readOffset == testOffset)
     }
 
-    @Test("Offset file is created in correct location")
-    func offsetFileLocation() throws {
+    @Test
+    func `Offset file is created in correct location`() throws {
         let tempDir = try createTempDirectory()
         defer { cleanupTempDirectory(tempDir) }
 
@@ -45,8 +45,8 @@ struct OffsetManagerTests {
 
     // MARK: Atomic Updates Tests
 
-    @Test("Atomic update prevents corruption")
-    func atomicUpdate() throws {
+    @Test
+    func `Atomic update prevents corruption`() throws {
         let tempDir = try createTempDirectory()
         defer { cleanupTempDirectory(tempDir) }
 
@@ -69,8 +69,8 @@ struct OffsetManagerTests {
 
     // MARK: Error Handling Tests
 
-    @Test("Read corrupted file handles error gracefully")
-    func readCorruptedFile() throws {
+    @Test
+    func `Read corrupted file handles error gracefully`() throws {
         let tempDir = try createTempDirectory()
         defer { cleanupTempDirectory(tempDir) }
 
@@ -86,8 +86,8 @@ struct OffsetManagerTests {
         }
     }
 
-    @Test("Read safely handles corrupted file without throwing")
-    func readSafelyWithCorruption() throws {
+    @Test
+    func `Read safely handles corrupted file without throwing`() throws {
         let tempDir = try createTempDirectory()
         defer { cleanupTempDirectory(tempDir) }
 
@@ -102,8 +102,8 @@ struct OffsetManagerTests {
         #expect(offset == nil)
     }
 
-    @Test("Empty file is handled gracefully")
-    func emptyFile() throws {
+    @Test
+    func `Empty file is handled gracefully`() throws {
         let tempDir = try createTempDirectory()
         defer { cleanupTempDirectory(tempDir) }
 
@@ -117,8 +117,8 @@ struct OffsetManagerTests {
         #expect(offset == nil)
     }
 
-    @Test("Whitespace-only file is handled gracefully")
-    func whitespaceOnlyFile() throws {
+    @Test
+    func `Whitespace-only file is handled gracefully`() throws {
         let tempDir = try createTempDirectory()
         defer { cleanupTempDirectory(tempDir) }
 
@@ -134,8 +134,8 @@ struct OffsetManagerTests {
 
     // MARK: Directory Creation Tests
 
-    @Test("Creates directory if it doesn't exist")
-    func createsDirectory() throws {
+    @Test
+    func `Creates directory if it doesn't exist`() throws {
         let tempDir = try createTempDirectory()
         let nonExistentSubDir = tempDir.appendingPathComponent("nested").appendingPathComponent("config")
         defer { cleanupTempDirectory(tempDir) }
@@ -152,8 +152,8 @@ struct OffsetManagerTests {
 
     // MARK: Large Values Tests
 
-    @Test("Handles large offset values")
-    func largeOffsetValues() throws {
+    @Test
+    func `Handles large offset values`() throws {
         let tempDir = try createTempDirectory()
         defer { cleanupTempDirectory(tempDir) }
 
