@@ -13,11 +13,13 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-configuration.git", from: "0.2.0", traits: ["YAMLSupport"]),
         .package(url: "https://github.com/jpsim/Yams", from: "6.2.0"),
         .package(url: "https://github.com/rapierorg/telegram-bot-swift", from: "2.1.3"),
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "1.5.0"),
     ],
     targets: [
         .executableTarget(
             name: "stylus",
             dependencies: [
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "TelegramBotSDK", package: "telegram-bot-swift"),
                 .product(name: "Configuration", package: "swift-configuration"),
                 "Yams",
