@@ -26,9 +26,9 @@ struct BookmarkJournalTransformer {
     /// Transforms a bookmark detail into a journal entry line.
     ///
     /// - Parameter bookmark: The bookmark to transform.
-    /// - Returns: A tuple of (journalFileName, entryLine), where journalFileName is `yyyy_MM_dd.md`
-    ///   and entryLine is the formatted markdown line.
-    func transform(_ bookmark: BookmarkDetail) -> (journalFileName: String, entryLine: String) {
+    /// - Returns: A tuple of (journalFileName, entryLine, date), where journalFileName is `yyyy_MM_dd.md`,
+    ///   entryLine is the formatted markdown line, and date is the parsed creation date.
+    func transform(_ bookmark: BookmarkDetail) -> (journalFileName: String, entryLine: String, date: Date) {
         let date = parseDate(from: bookmark.created)
         let timeString = formatTime(from: date)
         let journalFileName = formatJournalDate(from: date)
@@ -37,7 +37,7 @@ struct BookmarkJournalTransformer {
 
         let entryLine = "- **\(timeString)** [\(linkText)](\(bookmark.url)) \(tags)\n"
 
-        return (journalFileName: journalFileName, entryLine: entryLine)
+        return (journalFileName: journalFileName, entryLine: entryLine, date: date)
     }
 
     // MARK: Private Functions

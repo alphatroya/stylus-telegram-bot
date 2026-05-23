@@ -198,6 +198,205 @@ struct ReadeckSyncRunnerTests {
         #expect(timestampManager.readLastFetch() == nil)
     }
 
+    // MARK: Sorting
+
+    @Test
+    func `Multiple entries on same day are sorted chronologically`() async throws {
+        let tempDir = try createTempDirectory()
+        defer { cleanupTempDirectory(tempDir) }
+
+        let mockClient = MockReadeckClient()
+        // Entries arrive unsorted: 18:55, 09:05, 14:30
+        mockClient.syncEntries = [
+            BookmarkSyncEntry(id: "b1", time: "2025-06-15T18:55:00Z", type: "update"),
+            BookmarkSyncEntry(id: "b2", time: "2025-06-15T09:05:00Z", type: "update"),
+            BookmarkSyncEntry(id: "b3", time: "2025-06-15T14:30:00Z", type: "update"),
+        ]
+        mockClient.bookmarkDetails = [
+            "b1": BookmarkDetail(
+                id: "b1",
+                title: "Evening Article",
+                url: "https://example.com/evening",
+                created: "2025-06-15T18:55:00Z",
+                labels: [],
+                isArchived: false,
+            ),
+            "b2": BookmarkDetail(
+                id: "b2",
+                title: "Morning Article",
+                url: "https://example.com/morning",
+                created: "2025-06-15T09:05:00Z",
+                labels: [],
+                isArchived: false,
+            ),
+            "b3": BookmarkDetail(
+                id: "b3",
+                title: "Afternoon Article",
+                url: "https://example.com/afternoon",
+                created: "2025-06-15T14:30:00Z",
+                labels: [],
+                isArchived: false,
+            ),
+        ]
+
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+
+        let config = makeConfig(knowledgeBase: tempDir.path)
+        let runner = ReadeckSyncRunner(
+            config: config,
+            client: mockClient,
+            timestampManager: ReadeckFetchTimestamp(configDirectory: tempDir.path),
+            journalWriter: journalWriter,
+        )
+
+        try await runner.run()
+
+        // Verify all bookmarks were fetched
+        #expect(mockClient.fetchBookmarkCallCount == 3)
+
+        // Verify the written content is sorted by time
+        // Since all entries go to the same file, mockFileWorker should have the sorted content
+        // For a new file, writeStringToFile is used
+        #expect(mockFileWorker.writeStringToFileCallCount == 1)
+        let journalContent = mockFileWorker.fileSystem.values.first(where: { $0.contains("Morning Article") })
+        #expect(journalContent != nil)
+
+        // Verify order: Morning (09:05) before Afternoon (14:30) before Evening (18:55)
+        if let content = journalContent {
+            let morningRange = try #require(content.range(of: "Morning Article"))
+            let afternoonRange = try #require(content.range(of: "Afternoon Article"))
+            let eveningRange = try #require(content.range(of: "Evening Article"))
+            #expect(morningRange.lowerBound < afternoonRange.lowerBound)
+            #expect(afternoonRange.lowerBound < eveningRange.lowerBound)
+        }
+    }
+
+    @Test
+    func `Multiple days are sorted independently`() async throws {
+        let tempDir = try createTempDirectory()
+        defer { cleanupTempDirectory(tempDir) }
+
+        let mockClient = MockReadeckClient()
+        mockClient.syncEntries = [
+            BookmarkSyncEntry(id: "b1", time: "2025-06-15T18:00:00Z", type: "update"),
+            BookmarkSyncEntry(id: "b2", time: "2025-06-15T09:00:00Z", type: "update"),
+            BookmarkSyncEntry(id: "b3", time: "2025-06-16T15:00:00Z", type: "update"),
+            BookmarkSyncEntry(id: "b4", time: "2025-06-16T08:00:00Z", type: "update"),
+        ]
+        mockClient.bookmarkDetails = [
+            "b1": BookmarkDetail(
+                id: "b1",
+                title: "Day1 Evening",
+                url: "https://example.com/d1e",
+                created: "2025-06-15T18:00:00Z",
+                labels: [],
+                isArchived: false,
+            ),
+            "b2": BookmarkDetail(
+                id: "b2",
+                title: "Day1 Morning",
+                url: "https://example.com/d1m",
+                created: "2025-06-15T09:00:00Z",
+                labels: [],
+                isArchived: false,
+            ),
+            "b3": BookmarkDetail(
+                id: "b3",
+                title: "Day2 Afternoon",
+                url: "https://example.com/d2a",
+                created: "2025-06-16T15:00:00Z",
+                labels: [],
+                isArchived: false,
+            ),
+            "b4": BookmarkDetail(
+                id: "b4",
+                title: "Day2 Morning",
+                url: "https://example.com/d2m",
+                created: "2025-06-16T08:00:00Z",
+                labels: [],
+                isArchived: false,
+            ),
+        ]
+
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+
+        let config = makeConfig(knowledgeBase: tempDir.path)
+        let runner = ReadeckSyncRunner(
+            config: config,
+            client: mockClient,
+            timestampManager: ReadeckFetchTimestamp(configDirectory: tempDir.path),
+            journalWriter: journalWriter,
+        )
+
+        try await runner.run()
+
+        #expect(mockClient.fetchBookmarkCallCount == 4)
+
+        // Two separate files should be written
+        #expect(mockFileWorker.writeStringToFileCallCount == 2)
+
+        // Find each day's content
+        let day1Content = mockFileWorker.fileSystem.values.first(where: { $0.contains("Day1") })
+        let day2Content = mockFileWorker.fileSystem.values.first(where: { $0.contains("Day2") })
+        #expect(day1Content != nil)
+        #expect(day2Content != nil)
+
+        // Verify sorting within each day
+        if let content = day1Content {
+            let morningRange = try #require(content.range(of: "Day1 Morning"))
+            let eveningRange = try #require(content.range(of: "Day1 Evening"))
+            #expect(morningRange.lowerBound < eveningRange.lowerBound)
+        }
+        if let content = day2Content {
+            let morningRange = try #require(content.range(of: "Day2 Morning"))
+            let afternoonRange = try #require(content.range(of: "Day2 Afternoon"))
+            #expect(morningRange.lowerBound < afternoonRange.lowerBound)
+        }
+    }
+
+    @Test
+    func `Single entry produces correct output`() async throws {
+        let tempDir = try createTempDirectory()
+        defer { cleanupTempDirectory(tempDir) }
+
+        let mockClient = MockReadeckClient()
+        mockClient.syncEntries = [
+            BookmarkSyncEntry(id: "b1", time: "2025-06-15T14:30:00Z", type: "update"),
+        ]
+        mockClient.bookmarkDetails = [
+            "b1": BookmarkDetail(
+                id: "b1",
+                title: "Solo Article",
+                url: "https://example.com/solo",
+                created: "2025-06-15T14:30:00Z",
+                labels: [],
+                isArchived: false,
+            ),
+        ]
+
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+
+        let config = makeConfig(knowledgeBase: tempDir.path)
+        let runner = ReadeckSyncRunner(
+            config: config,
+            client: mockClient,
+            timestampManager: ReadeckFetchTimestamp(configDirectory: tempDir.path),
+            journalWriter: journalWriter,
+        )
+
+        try await runner.run()
+
+        #expect(mockClient.fetchBookmarkCallCount == 1)
+        #expect(mockFileWorker.writeStringToFileCallCount == 1)
+
+        let content = mockFileWorker.fileSystem.values.first(where: { $0.contains("Solo Article") })
+        #expect(content != nil)
+        #expect(content?.contains("Solo Article") == true)
+    }
+
     // MARK: Helpers
 
     private func makeConfig(knowledgeBase: String) -> Config {
