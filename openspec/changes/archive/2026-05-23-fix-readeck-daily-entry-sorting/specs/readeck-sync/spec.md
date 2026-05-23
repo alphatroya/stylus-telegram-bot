@@ -1,26 +1,4 @@
-## ADDED Requirements
-
-### Requirement: Readeck sync mode activation
-The system SHALL activate Readeck sync mode when the `--readeck` CLI flag is passed. When no flag is provided, the system SHALL run in the default Telegram mode.
-
-#### Scenario: Running with --readeck flag
-- **WHEN** the CLI is invoked with `--readeck` argument
-- **THEN** the system SHALL fetch bookmarks from Readeck instead of processing Telegram messages
-
-#### Scenario: Running without flag
-- **WHEN** the CLI is invoked without `--readeck`
-- **THEN** the system SHALL process Telegram messages as it does currently
-
-### Requirement: Readeck configuration
-The system SHALL read `readeckEndpoint` and `readeckApiToken` from the YAML config file. Both fields SHALL be required when running in Readeck mode.
-
-#### Scenario: Valid Readeck config present
-- **WHEN** `--readeck` is passed and config contains `readeckEndpoint` and `readeckApiToken`
-- **THEN** the system SHALL proceed with Readeck sync
-
-#### Scenario: Missing Readeck config
-- **WHEN** `--readeck` is passed but `readeckEndpoint` or `readeckApiToken` is missing from config
-- **THEN** the system SHALL exit with a descriptive error message
+## MODIFIED Requirements
 
 ### Requirement: Incremental bookmark sync
 The system SHALL fetch only bookmarks that have been created or updated since the last successful sync by calling `GET /bookmarks/sync?since=<timestamp>` on the Readeck API. The system SHALL batch-transform all fetched bookmarks, group them by journal file (day), sort each group by creation time ascending, and then write each group to its journal file.
@@ -45,17 +23,6 @@ The system SHALL fetch only bookmarks that have been created or updated since th
 - **WHEN** multiple bookmarks target the same journal file (same day) and their creation times are unsorted
 - **THEN** the system SHALL write them in ascending creation time order
 
-### Requirement: Last fetch timestamp persistence
-The system SHALL store the timestamp of the most recent sync entry (from the sync response's `time` field) in `readeck_last_fetch.txt` using ISO 8601 format. The file SHALL be written atomically in the same directory as the config file.
-
-#### Scenario: Successful sync completes
-- **WHEN** all bookmarks from a sync have been processed and written to journal files
-- **THEN** the system SHALL update `readeck_last_fetch.txt` with the latest `time` value from the sync response
-
-#### Scenario: Sync fails partially
-- **WHEN** an error occurs during bookmark processing
-- **THEN** the system SHALL NOT update `readeck_last_fetch.txt` (so the next run retries the same window)
-
 ### Requirement: Bookmark to journal entry transformation
 The system SHALL transform each Readeck bookmark into a markdown journal entry line appended to the daily journal file corresponding to the bookmark's creation date. Every entry SHALL include the `#from-readeck` source tag. Readeck labels SHALL be converted to individual `#tag` entries placed after the link. The `#stylus-inbox` tag SHALL be appended last. The transform method SHALL also return the parsed creation `Date` for use in sorting.
 
@@ -78,25 +45,3 @@ The system SHALL transform each Readeck bookmark into a markdown journal entry l
 #### Scenario: Labels as separate tags
 - **WHEN** a bookmark has labels ["tech", "ai", "research"]
 - **THEN** each label SHALL appear as a separate tag: `#tech #ai #research`
-
-### Requirement: Readeck API authentication
-The system SHALL authenticate all Readeck API requests using Bearer token authentication via the `Authorization` header.
-
-#### Scenario: API request with valid token
-- **WHEN** a request is made to the Readeck API
-- **THEN** the system SHALL include `Authorization: Bearer <readeckApiToken>` header
-
-#### Scenario: API returns 401 Unauthorized
-- **WHEN** the Readeck API responds with HTTP 401
-- **THEN** the system SHALL exit with an error indicating invalid or expired API token
-
-### Requirement: Journal directory structure compatibility
-The system SHALL write bookmark journal entries to the same `journals/` subdirectory within the knowledge base, using the same date-based filename pattern (`yyyy_MM_dd.md`) as Telegram message processing.
-
-#### Scenario: Journal file already exists
-- **WHEN** a journal file for the bookmark's date already exists (possibly from Telegram entries)
-- **THEN** the system SHALL append the bookmark entry to the existing file
-
-#### Scenario: Journal file does not exist
-- **WHEN** no journal file exists for the bookmark's date
-- **THEN** the system SHALL create a new file with the bookmark entry

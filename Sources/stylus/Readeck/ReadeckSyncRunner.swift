@@ -103,21 +103,30 @@ struct ReadeckSyncRunner {
             .appendingPathComponent("journals")
         try await journalWriter.ensureDirectoryExists(at: journalsURL.path)
 
-        var processedCount = 0
+        // Batch approach: collect all transformed entries
+        typealias TransformedEntry = (journalFileName: String, entryLine: String, date: Date)
+        var transformedEntries: [TransformedEntry] = []
 
         for entry in updateEntries {
-            do {
-                let bookmark = try await client.fetchBookmark(id: entry.id)
-                let (fileName, entryLine) = transformer.transform(bookmark)
-                let filePath = journalsURL.appendingPathComponent(fileName).path
+            let bookmark = try await client.fetchBookmark(id: entry.id)
+            let result = transformer.transform(bookmark)
+            transformedEntries.append(result)
+            print("📥 Fetched bookmark: \(bookmark.title)")
+        }
 
-                try await journalWriter.appendToJournalFile(at: filePath, content: entryLine)
-                processedCount += 1
-                print("✅ Processed bookmark \(processedCount)/\(updateEntries.count): \(bookmark.title)")
-            } catch {
-                print("❌ Error processing bookmark \(entry.id): \(error.localizedDescription)")
-                throw error
-            }
+        // Group by journal file name (day)
+        let grouped = Dictionary(grouping: transformedEntries) { $0.journalFileName }
+
+        // Sort each group by date ascending, then write
+        var processedCount = 0
+        for (fileName, entries) in grouped {
+            let sorted = entries.sorted { $0.date < $1.date }
+            let filePath = journalsURL.appendingPathComponent(fileName).path
+            let lines = sorted.map(\.entryLine)
+
+            try await journalWriter.appendToJournalFile(at: filePath, contents: lines)
+            processedCount += sorted.count
+            print("✅ Wrote \(sorted.count) entry(ies) to \(fileName)")
         }
 
         // 5. Update timestamp only after all bookmarks processed successfully

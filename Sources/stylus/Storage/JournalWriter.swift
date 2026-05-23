@@ -66,6 +66,13 @@ actor JournalWriter {
         }
     }
 
+    func appendToJournalFile(at filePath: String, contents: [String]) throws {
+        guard !contents.isEmpty else { return }
+
+        let combined = contents.joined()
+        try appendToJournalFile(at: filePath, content: combined)
+    }
+
     func saveImageFile(data: Data, to filePath: String) throws {
         guard !fileManager.fileExists(at: filePath) else {
             throw ImageFileError.fileAlreadyExists(filePath)

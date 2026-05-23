@@ -24,11 +24,12 @@ struct BookmarkJournalTransformerTests {
             isArchived: false,
         )
 
-        let (fileName, entryLine) = transformer.transform(bookmark)
+        let (fileName, entryLine, date) = transformer.transform(bookmark)
 
         #expect(fileName == localJournalDate(from: created))
         #expect(entryLine ==
             "- **\(localTime(from: created))** [Swift Concurrency Guide](https://example.com/swift) #from-readeck #programming #swift #stylus-inbox\n")
+        #expect(date == parseUTCDate(from: created))
     }
 
     @Test
@@ -42,8 +43,9 @@ struct BookmarkJournalTransformerTests {
             isArchived: false,
         )
 
-        let (_, entryLine) = transformer.transform(bookmark)
+        let (_, entryLine, date) = transformer.transform(bookmark)
         #expect(entryLine.contains("#from-readeck"))
+        #expect(date == parseUTCDate(from: "2025-01-01T00:00:00Z"))
     }
 
     @Test
@@ -58,9 +60,10 @@ struct BookmarkJournalTransformerTests {
             isArchived: false,
         )
 
-        let (_, entryLine) = transformer.transform(bookmark)
+        let (_, entryLine, date) = transformer.transform(bookmark)
         #expect(entryLine ==
             "- **\(localTime(from: created))** [No Labels Article](https://example.com/article) #from-readeck #stylus-inbox\n")
+        #expect(date == parseUTCDate(from: created))
     }
 
     @Test
@@ -74,8 +77,9 @@ struct BookmarkJournalTransformerTests {
             isArchived: false,
         )
 
-        let (_, entryLine) = transformer.transform(bookmark)
+        let (_, entryLine, date) = transformer.transform(bookmark)
         #expect(entryLine.contains("[https://example.com/no-title](https://example.com/no-title)"))
+        #expect(date == parseUTCDate(from: "2025-02-10T18:45:00Z"))
     }
 
     @Test
@@ -89,8 +93,9 @@ struct BookmarkJournalTransformerTests {
             isArchived: false,
         )
 
-        let (_, entryLine) = transformer.transform(bookmark)
+        let (_, entryLine, date) = transformer.transform(bookmark)
         #expect(entryLine.contains("#tech #ai #research"))
+        #expect(date == parseUTCDate(from: "2025-04-01T12:00:00Z"))
     }
 
     @Test
@@ -104,8 +109,9 @@ struct BookmarkJournalTransformerTests {
             isArchived: false,
         )
 
-        let (fileName, _) = transformer.transform(bookmark)
+        let (fileName, _, date) = transformer.transform(bookmark)
         #expect(fileName == localJournalDate(from: "2025-12-25T23:59:00Z"))
+        #expect(date == parseUTCDate(from: "2025-12-25T23:59:00Z"))
     }
 
     @Test
@@ -120,8 +126,9 @@ struct BookmarkJournalTransformerTests {
             isArchived: false,
         )
 
-        let (_, entryLine) = transformer.transform(bookmark)
+        let (_, entryLine, date) = transformer.transform(bookmark)
         #expect(entryLine.contains("**\(localTime(from: created))**"))
+        #expect(date == parseUTCDate(from: created))
     }
 
     @Test
@@ -135,8 +142,9 @@ struct BookmarkJournalTransformerTests {
             isArchived: false,
         )
 
-        let (_, entryLine) = transformer.transform(bookmark)
+        let (_, entryLine, date) = transformer.transform(bookmark)
         #expect(entryLine.hasSuffix("#stylus-inbox\n"))
+        #expect(date == parseUTCDate(from: "2025-01-01T00:00:00Z"))
     }
 
     @Test
@@ -150,9 +158,10 @@ struct BookmarkJournalTransformerTests {
             isArchived: false,
         )
 
-        let (_, entryLine) = transformer.transform(bookmark)
+        let (_, entryLine, date) = transformer.transform(bookmark)
         #expect(entryLine.contains("#machine-learning"))
         #expect(entryLine.contains("#web-dev"))
+        #expect(date == parseUTCDate(from: "2025-01-01T00:00:00Z"))
     }
 
     // MARK: Helpers
@@ -166,6 +175,15 @@ struct BookmarkJournalTransformerTests {
         let timeFormatter = DateFormatter()
         timeFormatter.dateFormat = "HH:mm"
         return timeFormatter.string(from: date)
+    }
+
+    /// Parses a UTC ISO 8601 string into a Date
+    private func parseUTCDate(from utcString: String) -> Date {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+        guard let date = formatter.date(from: utcString) else { return Date() }
+
+        return date
     }
 
     /// Formats a UTC ISO 8601 string to local journal date (yyyy_MM_dd.md)
