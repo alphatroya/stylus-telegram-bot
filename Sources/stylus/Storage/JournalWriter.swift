@@ -42,6 +42,12 @@ actor JournalWriter {
     }
 
     func appendToJournalFile(at filePath: String, content: String) throws {
+        if try containsDuplicate(at: filePath, content: content) {
+            let fileName = URL(fileURLWithPath: filePath).lastPathComponent
+            print("🔁 Skipped duplicate entry in \(fileName)")
+            return
+        }
+
         if fileManager.fileExists(at: filePath) {
             let currentContent = try fileManager.contents(at: filePath) ?? ""
             let needsNewline = !currentContent.isEmpty && !currentContent.hasSuffix("\n")
@@ -69,7 +75,32 @@ actor JournalWriter {
     func appendToJournalFile(at filePath: String, contents: [String]) throws {
         guard !contents.isEmpty else { return }
 
-        let combined = contents.joined()
+        // Read existing lines once for batch dedup
+        var existingTrimmedLines: Set<String> = []
+        if fileManager.fileExists(at: filePath) {
+            if let currentContent = try fileManager.contents(at: filePath), !currentContent.isEmpty {
+                existingTrimmedLines = Set(
+                    currentContent.components(separatedBy: .newlines)
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty },
+                )
+            }
+        }
+
+        let newEntries = contents.filter { entry in
+            let trimmed = entry.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !existingTrimmedLines.contains(trimmed)
+        }
+
+        let skippedCount = contents.count - newEntries.count
+        if skippedCount > 0 {
+            let fileName = URL(fileURLWithPath: filePath).lastPathComponent
+            print("🔁 Skipped \(skippedCount) duplicate entry(ies) in \(fileName)")
+        }
+
+        guard !newEntries.isEmpty else { return }
+
+        let combined = newEntries.joined()
         try appendToJournalFile(at: filePath, content: combined)
     }
 
@@ -79,5 +110,18 @@ actor JournalWriter {
         }
 
         try fileManager.writeDataToFile(data: data, path: filePath)
+    }
+
+    // MARK: Private Functions
+
+    private func containsDuplicate(at filePath: String, content: String) throws -> Bool {
+        guard fileManager.fileExists(at: filePath) else { return false }
+
+        let currentContent = try fileManager.contents(at: filePath) ?? ""
+        guard !currentContent.isEmpty else { return false }
+
+        let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let existingLines = currentContent.components(separatedBy: .newlines)
+        return existingLines.contains { $0.trimmingCharacters(in: .whitespacesAndNewlines) == trimmedContent }
     }
 }
