@@ -138,4 +138,125 @@ struct JournalWriterTests {
             try await journalWriter.saveImageFile(data: testData, to: testPath)
         }
     }
+
+    // MARK: - Duplicate Detection Tests
+
+    @Test func `single duplicate detected and skipped`() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/journal.md"
+        let entry = "- **14:30** [Title](url) #from-readeck #stylus-inbox\n"
+
+        // First write: file doesn't exist, creates it
+        try await journalWriter.appendToJournalFile(at: testPath, content: entry)
+        #expect(mockFileWorker.writeStringToFileCallCount == 1)
+        #expect(mockFileWorker.fileSystem[testPath] == entry)
+
+        // Second write: same content, should be skipped
+        try await journalWriter.appendToJournalFile(at: testPath, content: entry)
+        #expect(mockFileWorker.writeStringToFileCallCount == 1) // still 1, no new write
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 0) // no append either
+        #expect(mockFileWorker.fileSystem[testPath] == entry) // content unchanged
+    }
+
+    @Test func `non-duplicate entry appended normally`() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/journal.md"
+        let entry1 = "- **09:00** First entry\n"
+        let entry2 = "- **10:30** Second entry\n"
+
+        mockFileWorker.fileSystem[testPath] = entry1
+
+        try await journalWriter.appendToJournalFile(at: testPath, content: entry2)
+
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
+        #expect(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8) == entry2)
+    }
+
+    @Test func `file does not exist creates without dedup`() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/new_journal.md"
+        let content = "First ever entry\n"
+
+        // File doesn't exist — should create it without any dedup check
+        try await journalWriter.appendToJournalFile(at: testPath, content: content)
+
+        #expect(mockFileWorker.writeStringToFileCallCount == 1)
+        #expect(mockFileWorker.fileSystem[testPath] == content)
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 0)
+    }
+
+    @Test func `empty existing file appends without dedup`() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/empty_journal.md"
+        let content = "First entry in empty file\n"
+
+        // Simulate empty existing file
+        mockFileWorker.fileSystem[testPath] = ""
+
+        try await journalWriter.appendToJournalFile(at: testPath, content: content)
+
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
+        #expect(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8) == content)
+    }
+
+    @Test func `batch with some duplicates only appends new`() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/journal.md"
+        let entry1 = "- **09:00** First\n"
+        let entry2 = "- **10:00** Second\n"
+        let entry3 = "- **11:00** Third\n"
+
+        // File already has entry1 and entry2
+        mockFileWorker.fileSystem[testPath] = entry1 + entry2
+
+        // Batch: entry1 (dup), entry2 (dup), entry3 (new)
+        try await journalWriter.appendToJournalFile(at: testPath, contents: [entry1, entry2, entry3])
+
+        // entry3 should be appended via the content method
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
+        #expect(String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8) == entry3)
+    }
+
+    @Test func `batch with all duplicates does not modify file`() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/journal.md"
+        let entry1 = "- **09:00** First\n"
+        let entry2 = "- **10:00** Second\n"
+
+        let originalContent = entry1 + entry2
+        mockFileWorker.fileSystem[testPath] = originalContent
+
+        // Batch: all entries already exist
+        try await journalWriter.appendToJournalFile(at: testPath, contents: [entry1, entry2])
+
+        #expect(mockFileWorker.writeStringToFileCallCount == 0)
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 0)
+        #expect(mockFileWorker.fileSystem[testPath] == originalContent) // unchanged
+    }
+
+    @Test func `batch with no duplicates appends all`() async throws {
+        let mockFileWorker = MockFileWorker()
+        let journalWriter = JournalWriter(fileManager: mockFileWorker)
+        let testPath = "/test/journal.md"
+        let entry1 = "- **09:00** First\n"
+        let entry2 = "- **10:00** Second\n"
+        let entry3 = "- **11:00** Third\n"
+
+        // File already has entry1
+        mockFileWorker.fileSystem[testPath] = entry1
+
+        // Batch: entry2 and entry3 are new
+        try await journalWriter.appendToJournalFile(at: testPath, contents: [entry2, entry3])
+
+        // Both new entries should be appended via the content method (combined)
+        #expect(mockFileWorker.fileHandleForWritingCallCount == 1)
+        let appended = String(data: mockFileWorker.mockFileHandle.data, encoding: .utf8)
+        #expect(appended == entry2 + entry3)
+    }
 }
